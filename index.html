@@ -259,8 +259,32 @@
       border-radius: 1rem;
       margin: 1rem 0;
     }
+
+    .file-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: 0.5rem;
+      margin-bottom: 0.3rem;
+    }
+    .file-list-item .file-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+      margin-right: 1rem;
+    }
+    .file-list-item select {
+      padding: 0.3rem 0.5rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 0.4rem;
+      color: white;
+      font-size: 0.85rem;
+    }
   </style>
-  <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 </head>
 <body>
 <div class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></div>
@@ -367,29 +391,27 @@
       <div id="page-upload" class="page">
         <h2><i class="fas fa-cloud-upload-alt"></i> Tải lên</h2>
         <div style="margin:1rem 0;">
-          <label style="font-weight:600; display:block; margin-bottom:0.5rem;">📁 Chọn thư mục đích <span style="color:var(--danger);">*</span></label>
-          <select id="uploadFolderSelect" style="width:100%; padding:0.8rem; background:var(--bg-card); border:1px solid var(--border); border-radius:0.8rem; color:white; font-size:1rem;">
-            <option value="">-- Vui lòng chọn thư mục --</option>
+          <label style="font-weight:600; display:block; margin-bottom:0.5rem;">📁 Thư mục mặc định</label>
+          <select id="defaultFolderSelect" style="width:100%; padding:0.8rem; background:var(--bg-card); border:1px solid var(--border); border-radius:0.8rem; color:white; font-size:1rem;">
+            <option value="">-- Chọn thư mục mặc định --</option>
           </select>
         </div>
 
-        <!-- Khu vực upload chỉ hiển thị khi đã chọn thư mục -->
-        <div id="uploadArea" class="hidden">
-          <div class="upload-zone" id="uploadZone">
-            <i class="fas fa-cloud-upload-alt fa-2x"></i>
-            <div>Nhấn để mở cửa sổ Cloudinary</div>
-            <div style="font-size:0.8rem; margin-top:0.5rem; color:var(--text-secondary);">
-              Hỗ trợ upload ảnh & video, không giới hạn kích thước.
-            </div>
+        <div class="upload-zone" id="uploadZone">
+          <i class="fas fa-cloud-upload-alt fa-2x"></i>
+          <div>Nhấn để chọn nhiều ảnh / video</div>
+          <div style="font-size:0.8rem; margin-top:0.5rem; color:var(--text-secondary);">
+            Sau đó chọn thư mục cho từng file.
           </div>
-          <input type="file" id="fileInput" style="display:none;">
-          <div id="uploadStatus" style="margin-top:0.5rem;"></div>
         </div>
+        <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none;">
 
-        <!-- Placeholder khi chưa chọn thư mục -->
-        <div id="uploadPlaceholder" class="upload-placeholder">
-          <i class="fas fa-folder-open fa-2x"></i>
-          <p style="margin-top:0.5rem;">Vui lòng chọn thư mục trước khi tải lên</p>
+        <div id="fileListContainer" style="margin:1rem 0;"></div>
+
+        <button class="btn" id="uploadAllBtn"><i class="fas fa-upload"></i> Upload All</button>
+        <div id="uploadStatus" style="margin-top:0.5rem;"></div>
+        <div class="progress-bar" style="margin-top:0.5rem; width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:4px;">
+          <div id="uploadProgress" style="height:100%; background:var(--accent); border-radius:4px; width:0%; transition: width 0.2s;"></div>
         </div>
       </div>
     </main>
@@ -578,9 +600,8 @@
     // App
     const sidebar = $('#sidebar'), mobileMenuBtn = $('#mobileMenuBtn'), sidebarCloseMobile = $('#sidebarCloseMobile');
     const folderList = $('#folderList'), folderTabsDesktop = $('#folderTabsDesktop'), folderSelectMobile = $('#folderSelectMobile');
-    const uploadFolderSelect = $('#uploadFolderSelect'), mediaGallery = $('#mediaGallery'), libraryTitle = $('#libraryTitle');
+    const mediaGallery = $('#mediaGallery'), libraryTitle = $('#libraryTitle');
     const newFolderName = $('#newFolderName'), createFolderBtn = $('#createFolderBtn');
-    const uploadStatus = $('#uploadStatus');
     const viewerOverlay = $('#viewerOverlay'), viewerContent = $('#viewerContent'), viewerCloseBtn = $('#viewerClose');
     const viewerPrev = $('#viewerPrev'), viewerNext = $('#viewerNext'), viewerCounter = $('#viewerCounter');
     const filterTabs = $('#filterTabs');
@@ -589,9 +610,17 @@
     const moveSelectedBtn = $('#moveSelectedBtn'), deleteSelectedBtn = $('#deleteSelectedBtn'), cancelSelectionBtn = $('#cancelSelectionBtn');
     const selectAllBtn = $('#selectAllBtn');
     const selectionRect = $('#selectionRect');
-    const uploadArea = $('#uploadArea');
-    const uploadPlaceholder = $('#uploadPlaceholder');
+
+    // Upload elements
+    const defaultFolderSelect = $('#defaultFolderSelect');
+    const fileInput = $('#fileInput');
     const uploadZone = $('#uploadZone');
+    const fileListContainer = $('#fileListContainer');
+    const uploadAllBtn = $('#uploadAllBtn');
+    const uploadStatus = $('#uploadStatus');
+    const uploadProgress = $('#uploadProgress');
+
+    let filesToUpload = []; // { file, folderId }
 
     // Rubber band
     let isDragging = false, dragStartX, dragStartY;
@@ -734,6 +763,8 @@
     async function loadFolders() {
       const snap = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
       foldersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const collator = new Intl.Collator('vi', { numeric: true, sensitivity: 'base' });
+      foldersCache.sort((a, b) => collator.compare(a.name, b.name));
       renderFolders();
     }
 
@@ -768,19 +799,19 @@
       });
       folderSelectMobile.innerHTML = selectHTML;
 
-      // Cập nhật dropdown upload: giữ nguyên nhưng không có "__unfiled__" vì upload vào "Chưa phân loại" là không có folder
-      uploadFolderSelect.innerHTML = '<option value="">-- Vui lòng chọn thư mục --</option>';
+      // Populate default folder dropdown và moveFolderSelect
+      defaultFolderSelect.innerHTML = '<option value="">-- Chọn thư mục mặc định --</option>';
       foldersCache.forEach(f => {
-        uploadFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
+        defaultFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
       });
-      // Thêm option "Chưa phân loại" (tương đương upload không folder)
-      uploadFolderSelect.innerHTML += '<option value="__unfiled__">📂 Chưa phân loại (không thư mục)</option>';
+      defaultFolderSelect.innerHTML += '<option value="__unfiled__">📂 Chưa phân loại (không thư mục)</option>';
 
       moveToFolderSelect.innerHTML = '<option value="">-- Chọn thư mục --</option>';
       foldersCache.forEach(f => {
         moveToFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
       });
 
+      // Gán sự kiện folder items, tabs, mobile select
       document.querySelectorAll('#folderList .folder-item').forEach(el => {
         el.addEventListener('click', (e) => {
           if (e.target.closest('.folder-actions')) return;
@@ -818,6 +849,7 @@
         applyFilter();
       });
 
+      // Rename / Delete folder buttons
       document.querySelectorAll('.rename-folder-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
@@ -913,7 +945,7 @@
       return file.url;
     }
 
-    // Selection logic (đã sửa)
+    // Selection logic
     function clearSelection() {
       selectedMediaIds.clear();
       updateSelectionUI();
@@ -1009,103 +1041,169 @@
       }
     });
 
-    // ===== LOGIC HIỂN THỊ KHU VỰC UPLOAD DỰA TRÊN THƯ MỤC ĐÃ CHỌN =====
-    function toggleUploadArea() {
-      const selectedFolder = uploadFolderSelect.value;
-      if (selectedFolder === '') {
-        // Chưa chọn thư mục
-        uploadArea.classList.add('hidden');
-        uploadPlaceholder.classList.remove('hidden');
-      } else {
-        // Đã chọn thư mục (bao gồm cả "__unfiled__")
-        uploadArea.classList.remove('hidden');
-        uploadPlaceholder.classList.add('hidden');
-      }
+    // ===== UPLOAD MULTI-FILE, MULTI-FOLDER =====
+    function buildFolderOptions(selectedId = '') {
+      let opts = '<option value="">-- Chọn thư mục --</option>';
+      foldersCache.forEach(f => {
+        opts += `<option value="${f.id}" ${f.id === selectedId ? 'selected' : ''}>${f.name}</option>`;
+      });
+      opts += `<option value="__unfiled__" ${selectedId === '__unfiled__' ? 'selected' : ''}>📂 Chưa phân loại</option>`;
+      return opts;
     }
 
-    uploadFolderSelect.addEventListener('change', toggleUploadArea);
-
-    // Gọi lần đầu để đồng bộ trạng thái
-    toggleUploadArea();
-
-    // ===== CLOUDINARY UPLOAD WIDGET =====
-    uploadZone.addEventListener('click', () => {
-      const selectedFolder = uploadFolderSelect.value;
-      if (selectedFolder === '') {
-        uploadStatus.innerHTML = '❌ Vui lòng chọn thư mục trước khi tải lên.';
+    function renderFileList() {
+      fileListContainer.innerHTML = '';
+      if (filesToUpload.length === 0) {
+        fileListContainer.innerHTML = '<p style="color:var(--text-secondary);">Chưa có file nào được chọn.</p>';
         return;
       }
+      const defaultFolder = defaultFolderSelect.value;
+      filesToUpload.forEach((item, idx) => {
+        const file = item.file;
+        const div = document.createElement('div');
+        div.className = 'file-list-item';
+        div.innerHTML = `
+          <div class="file-info">
+            <i class="far fa-file"></i>
+            <span>${file.name} (${(file.size/1024/1024).toFixed(1)} MB)</span>
+          </div>
+          <select class="file-folder-select" data-index="${idx}">
+            ${buildFolderOptions(item.folderId || defaultFolder)}
+          </select>
+        `;
+        fileListContainer.appendChild(div);
+      });
 
-      if (typeof cloudinary === 'undefined') {
-        uploadStatus.innerHTML = '❌ Cloudinary widget không tải được. Hãy tắt chặn quảng cáo và thử lại.';
-        return;
-      }
+      // Gán sự kiện thay đổi folder cho từng select
+      document.querySelectorAll('.file-folder-select').forEach(select => {
+        select.addEventListener('change', (e) => {
+          const idx = parseInt(select.dataset.index);
+          filesToUpload[idx].folderId = select.value || null;
+        });
+      });
+    }
 
-      cloudinary.openUploadWidget(
-        {
-          cloudName: CLOUD_NAME,
-          uploadPreset: UPLOAD_PRESET,
-          multiple: true,
-          clientAllowedFormats: ['image', 'video'],
-          maxFileSize: 500000000,
-          styles: {
-            palette: {
-              window: "#1e2538",
-              windowBorder: "#4f8cff",
-              tabIcon: "#9aa4bf",
-              menuIcons: "#9aa4bf",
-              textDark: "#eef2f7",
-              textLight: "#9aa4bf",
-              link: "#4f8cff",
-              action: "#4f8cff",
-              inactiveTabIcon: "#4b5563",
-              error: "#f87171",
-              inProgress: "#4f8cff",
-              complete: "#10b981",
-              sourceBg: "#151b28"
-            },
-            frameBorder: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "1rem"
-          }
-        },
-        async (error, result) => {
-          if (error) {
-            uploadStatus.innerHTML = `<i class="fas fa-times-circle"></i> Lỗi: ${error.message}`;
-            return;
-          }
-          if (result && result.event === 'success') {
-            uploadStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
-            const folderId = selectedFolder === '__unfiled__' ? null : selectedFolder;
-            const file = result.info;
-            const isDuplicate = allMediaCache.some(m => m.original_name === file.original_filename && m.size === file.bytes);
-            if (isDuplicate) {
-              uploadStatus.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${file.original_filename} đã tồn tại. Đã bỏ qua.`;
-              return;
-            }
-            try {
-              await db.collection('users').doc(currentUser).collection('media').add({
-                url: file.secure_url,
-                public_id: file.public_id,
-                resource_type: file.resource_type,
-                original_name: file.original_filename,
-                size: file.bytes,
-                folder_id: folderId,
-                created_at: firebase.firestore.FieldValue.serverTimestamp()
-              });
-              uploadStatus.innerHTML = '<i class="fas fa-check-circle" style="color:#4ade80;"></i> Upload thành công!';
-              await loadAllMedia();
-              applyFilter();
-              loadFolders();
-            } catch (e) {
-              uploadStatus.innerHTML = `<i class="fas fa-times-circle"></i> Lỗi lưu: ${e.message}`;
-            }
-          }
-          if (result && result.event === 'error') {
-            uploadStatus.innerHTML = `<i class="fas fa-times-circle"></i> Lỗi upload: ${result.info?.message || 'không xác định'}`;
-          }
-        }
-      );
+    // Khi chọn file
+    fileInput.addEventListener('change', () => {
+      const newFiles = Array.from(fileInput.files);
+      const defaultFolder = defaultFolderSelect.value;
+      newFiles.forEach(file => {
+        filesToUpload.push({ file, folderId: defaultFolder || null });
+      });
+      renderFileList();
+      fileInput.value = ''; // reset để có thể chọn lại cùng file
     });
+
+    // Khi thay đổi thư mục mặc định, cập nhật lại các file chưa được gán folder riêng? Không, giữ nguyên.
+    defaultFolderSelect.addEventListener('change', () => {
+      // Có thể cập nhật tất cả file đang có về folder mặc định mới? Thường thì không nên.
+      // Chỉ áp dụng cho file mới thêm vào sau.
+    });
+
+    // Kéo thả
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor='var(--accent)'; });
+    uploadZone.addEventListener('dragleave', () => uploadZone.style.borderColor='');
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.style.borderColor='';
+      if (e.dataTransfer.files.length) {
+        const newFiles = Array.from(e.dataTransfer.files);
+        const defaultFolder = defaultFolderSelect.value;
+        newFiles.forEach(file => {
+          filesToUpload.push({ file, folderId: defaultFolder || null });
+        });
+        renderFileList();
+      }
+    });
+
+    // Upload all
+    uploadAllBtn.addEventListener('click', async () => {
+      if (!currentUser) return;
+      if (filesToUpload.length === 0) {
+        uploadStatus.textContent = 'Vui lòng chọn ít nhất một file.';
+        return;
+      }
+      uploadAllBtn.disabled = true;
+      uploadStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chuẩn bị...';
+      uploadProgress.style.width = '0%';
+      let successCount = 0, skipCount = 0;
+      const total = filesToUpload.length;
+
+      for (let i = 0; i < total; i++) {
+        const item = filesToUpload[i];
+        const file = item.file;
+        const folderId = item.folderId === '__unfiled__' ? null : (item.folderId || null);
+        const progressPercent = Math.round((i / total) * 100);
+        uploadProgress.style.width = progressPercent + '%';
+
+        // Kiểm tra trùng
+        const isDuplicate = allMediaCache.some(m => m.original_name === file.name && m.size === file.size);
+        if (isDuplicate) {
+          skipCount++;
+          continue;
+        }
+
+        uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Đang tải ${file.name} (${i+1}/${total})`;
+
+        try {
+          const result = await uploadFileToCloudinary(file, (pct) => {
+            uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${file.name} - ${pct}%`;
+          });
+          await db.collection('users').doc(currentUser).collection('media').add({
+            url: result.secure_url,
+            public_id: result.public_id,
+            resource_type: result.resource_type || (file.type.startsWith('video/') ? 'video' : 'image'),
+            original_name: file.name,
+            size: result.bytes,
+            folder_id: folderId,
+            created_at: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          successCount++;
+        } catch (e) {
+          uploadStatus.innerHTML = `<i class="fas fa-times-circle"></i> Lỗi upload ${file.name}: ${e.message}`;
+          uploadAllBtn.disabled = false;
+          return;
+        }
+      }
+
+      uploadProgress.style.width = '100%';
+      let msg = '';
+      if (successCount > 0) msg += `✅ Thành công: ${successCount}/${total} tệp. `;
+      if (skipCount > 0) msg += `⏭️ Bỏ qua trùng: ${skipCount}.`;
+      uploadStatus.innerHTML = msg || 'Không có tệp nào được tải.';
+      uploadAllBtn.disabled = false;
+      filesToUpload = [];
+      renderFileList();
+      await loadAllMedia();
+      applyFilter();
+      loadFolders();
+    });
+
+    function uploadFileToCloudinary(file, onProgress) {
+      return new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', UPLOAD_PRESET);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            if (onProgress) onProgress(pct);
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            reject(new Error('Upload thất bại: ' + xhr.statusText));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Lỗi kết nối'));
+        xhr.send(formData);
+      });
+    }
 
     // ===== RENDER MEDIA =====
     function renderMedia(files) {
