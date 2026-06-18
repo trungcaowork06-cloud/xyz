@@ -70,11 +70,13 @@
     .auth-box button { width:100%; padding:0.8rem; border-radius:1rem; background:#2563eb; color:white; border:none; margin-bottom:0.5rem; cursor:pointer; }
     .auth-toggle { text-align:center; color:#94a3b8; font-size:0.9rem; margin-top:1rem; }
     .auth-toggle span { color:#38bdf8; cursor:pointer; text-decoration:underline; }
-    .auth-box .confirm-password { margin-bottom:1rem; }
     .error-message { color:#f87171; font-size:0.85rem; margin-top:0.5rem; }
     .warning-banner {
       background:#b91c1c; color:white; padding:0.8rem; text-align:center; font-size:0.9rem;
       position:fixed; top:0; left:0; right:0; z-index:1000;
+    }
+    .info-banner {
+      background:#2563eb; color:white; padding:1rem; text-align:center; font-size:0.9rem;
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
@@ -82,72 +84,74 @@
 <body>
 <!-- Cảnh báo nếu mở bằng file:// -->
 <div id="fileWarning" class="warning-banner hidden">
-  ⚠️ Ứng dụng cần chạy qua <b>localhost</b> hoặc <b>GitHub Pages</b>. Vui lòng mở bằng <b>Live Server</b> hoặc deploy lên web.
+  ⚠️ Bạn đang mở file trực tiếp từ ổ cứng. Firebase không hoạt động. Vui lòng dùng <b>Live Server</b> trong VS Code hoặc mở qua <b>GitHub Pages</b>.
 </div>
 
-<!-- Auth Page -->
-<div id="authPage" class="auth-fullpage hidden">
-  <div class="auth-box" id="loginForm">
-    <h2>🔐 Đăng nhập</h2>
-    <input type="text" id="loginUsername" placeholder="Tên đăng nhập">
-    <input type="password" id="loginPassword" placeholder="Mật khẩu">
-    <button id="loginBtn">🚪 Đăng nhập</button>
-    <div class="auth-toggle">Chưa có tài khoản? <span id="showRegister">Đăng ký ngay</span></div>
-    <div id="loginError" class="error-message"></div>
+<div id="appContainer">
+  <!-- Auth Page -->
+  <div id="authPage" class="auth-fullpage">
+    <div class="auth-box" id="loginForm">
+      <h2>🔐 Đăng nhập</h2>
+      <input type="text" id="loginUsername" placeholder="Tên đăng nhập">
+      <input type="password" id="loginPassword" placeholder="Mật khẩu">
+      <button id="loginBtn">🚪 Đăng nhập</button>
+      <div class="auth-toggle">Chưa có tài khoản? <span id="showRegister">Đăng ký ngay</span></div>
+      <div id="loginError" class="error-message"></div>
+    </div>
+    <div class="auth-box hidden" id="registerForm">
+      <h2>✨ Đăng ký</h2>
+      <input type="text" id="regUsername" placeholder="Tên đăng nhập">
+      <input type="password" id="regPassword" placeholder="Mật khẩu (tối thiểu 4 ký tự)">
+      <input type="password" id="regConfirm" placeholder="Xác nhận mật khẩu">
+      <button id="registerBtn">📝 Tạo tài khoản</button>
+      <div class="auth-toggle">Đã có tài khoản? <span id="showLogin">Đăng nhập</span></div>
+      <div id="registerError" class="error-message"></div>
+    </div>
   </div>
-  <div class="auth-box hidden" id="registerForm">
-    <h2>✨ Đăng ký</h2>
-    <input type="text" id="regUsername" placeholder="Tên đăng nhập">
-    <input type="password" id="regPassword" placeholder="Mật khẩu (tối thiểu 4 ký tự)">
-    <input type="password" id="regConfirm" placeholder="Xác nhận mật khẩu" class="confirm-password">
-    <button id="registerBtn">📝 Tạo tài khoản</button>
-    <div class="auth-toggle">Đã có tài khoản? <span id="showLogin">Đăng nhập</span></div>
-    <div id="registerError" class="error-message"></div>
-  </div>
-</div>
 
-<!-- Main App -->
-<div id="appMain" class="hidden" style="display:flex; flex-direction:column; height:100vh;">
-  <div class="app">
-    <aside class="sidebar">
-      <h2>📁 Vault</h2>
-      <div class="menu-item active" data-page="library">🖼️ Thư viện</div>
-      <div class="menu-item" data-page="upload">⬆️ Tải lên</div>
-      <div class="folders-section">
-        <div style="font-weight:600; margin-bottom:0.5rem;">📂 Thư mục</div>
-        <div class="folder-list" id="folderList"></div>
-        <div class="add-folder">
-          <input type="text" id="newFolderName" placeholder="Tên mới...">
-          <button id="createFolderBtn">+</button>
+  <!-- Main App -->
+  <div id="appMain" class="hidden" style="display:flex; flex-direction:column; height:100vh;">
+    <div class="app">
+      <aside class="sidebar">
+        <h2>📁 Vault</h2>
+        <div class="menu-item active" data-page="library">🖼️ Thư viện</div>
+        <div class="menu-item" data-page="upload">⬆️ Tải lên</div>
+        <div class="folders-section">
+          <div style="font-weight:600; margin-bottom:0.5rem;">📂 Thư mục</div>
+          <div class="folder-list" id="folderList"></div>
+          <div class="add-folder">
+            <input type="text" id="newFolderName" placeholder="Tên mới...">
+            <button id="createFolderBtn">+</button>
+          </div>
         </div>
-      </div>
-      <div class="user-info"><span>👤</span> <span id="displayUser"></span></div>
-      <div class="logout-btn" id="logoutBtn">🚪 Đăng xuất</div>
-    </aside>
-    <main class="main-content">
-      <div id="page-library" class="page active">
-        <h2 id="libraryTitle">📚 Tất cả</h2>
-        <div class="folder-tabs" id="folderTabs"></div>
-        <div class="gallery" id="mediaGallery"></div>
-      </div>
-      <div id="page-upload" class="page">
-        <h2>📤 Tải lên</h2>
-        <label for="fileInput" class="file-label">📎 Chọn ảnh / video</label>
-        <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
-        <div id="fileName">Chưa chọn tệp</div>
-        <select id="uploadFolderSelect" style="margin:1rem 0; padding:0.5rem; border-radius:0.5rem; background:rgba(255,255,255,0.1); color:white; width:100%;">
-          <option value="">-- Thư mục gốc --</option>
-        </select>
-        <button id="uploadBtn" style="padding:0.7rem 2rem; background:#2563eb; border:none; border-radius:0.5rem; color:white;">Tải lên</button>
-        <div id="uploadStatus" style="margin-top:0.5rem;"></div>
-      </div>
-    </main>
+        <div class="user-info"><span>👤</span> <span id="displayUser"></span></div>
+        <div class="logout-btn" id="logoutBtn">🚪 Đăng xuất</div>
+      </aside>
+      <main class="main-content">
+        <div id="page-library" class="page active">
+          <h2 id="libraryTitle">📚 Tất cả</h2>
+          <div class="folder-tabs" id="folderTabs"></div>
+          <div class="gallery" id="mediaGallery"></div>
+        </div>
+        <div id="page-upload" class="page">
+          <h2>📤 Tải lên</h2>
+          <label for="fileInput" class="file-label">📎 Chọn ảnh / video</label>
+          <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
+          <div id="fileName">Chưa chọn tệp</div>
+          <select id="uploadFolderSelect" style="margin:1rem 0; padding:0.5rem; border-radius:0.5rem; background:rgba(255,255,255,0.1); color:white; width:100%;">
+            <option value="">-- Thư mục gốc --</option>
+          </select>
+          <button id="uploadBtn" style="padding:0.7rem 2rem; background:#2563eb; border:none; border-radius:0.5rem; color:white;">Tải lên</button>
+          <div id="uploadStatus" style="margin-top:0.5rem;"></div>
+        </div>
+      </main>
+    </div>
+    <nav class="bottom-nav" style="display:none; background:#1e293b; border-top:1px solid rgba(255,255,255,0.1); padding:0.5rem; justify-content:space-around; position:fixed; bottom:0; left:0; right:0; z-index:10;">
+      <div class="nav-item active" data-page="library">🖼️<span>Thư viện</span></div>
+      <div class="nav-item" data-page="upload">⬆️<span>Tải lên</span></div>
+      <div class="nav-item" id="mobileLogout">🚪<span>Thoát</span></div>
+    </nav>
   </div>
-  <nav class="bottom-nav" style="display:none; background:#1e293b; border-top:1px solid rgba(255,255,255,0.1); padding:0.5rem; justify-content:space-around; position:fixed; bottom:0; left:0; right:0; z-index:10;">
-    <div class="nav-item active" data-page="library">🖼️<span>Thư viện</span></div>
-    <div class="nav-item" data-page="upload">⬆️<span>Tải lên</span></div>
-    <div class="nav-item" id="mobileLogout">🚪<span>Thoát</span></div>
-  </nav>
 </div>
 
 <!-- Firebase & Cloudinary SDK -->
@@ -156,419 +160,319 @@
 <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 
 <script>
-  // ===== CẤU HÌNH =====
-  const firebaseConfig = {
-    apiKey: "AIzaSyBG7rSMk9FqD9GgNYwApXlsPBnxeyZi8qU",
-    authDomain: "xyzweb-906a1.firebaseapp.com",
-    projectId: "xyzweb-906a1",
-    storageBucket: "xyzweb-906a1.firebasestorage.app",
-    messagingSenderId: "268520089231",
-    appId: "1:268520089231:web:f9fcf91be875cda72272fa"
-  };
-  const CLOUDINARY_CLOUD_NAME = "diiwvsz3o";
-  const CLOUDINARY_UPLOAD_PRESET = "xyzweb";
-
-  // Kiểm tra môi trường file://
-  if (window.location.protocol === 'file:') {
-    document.getElementById('fileWarning').classList.remove('hidden');
-  }
-
-  // Khởi tạo Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-
-  // Cấu hình Firestore để tăng khả năng tương thích (dùng long polling)
-  db.settings({
-    experimentalForceLongPolling: true,
-    merge: true
-  });
-
-  // ===== BIẾN TOÀN CỤC =====
-  let currentUser = null;
-  let currentFolderId = null;
-  let foldersCache = [];
-  let isOnline = navigator.onLine;
-
-  // Lắng nghe sự kiện online/offline
-  window.addEventListener('online', () => { isOnline = true; });
-  window.addEventListener('offline', () => { isOnline = false; });
-
-  // Auth UI elements
-  const authPage = document.getElementById('authPage');
-  const appMain = document.getElementById('appMain');
-  const loginForm = document.getElementById('loginForm');
-  const registerForm = document.getElementById('registerForm');
-  const loginUsername = document.getElementById('loginUsername');
-  const loginPassword = document.getElementById('loginPassword');
-  const loginBtn = document.getElementById('loginBtn');
-  const loginError = document.getElementById('loginError');
-  const regUsername = document.getElementById('regUsername');
-  const regPassword = document.getElementById('regPassword');
-  const regConfirm = document.getElementById('regConfirm');
-  const registerBtn = document.getElementById('registerBtn');
-  const registerError = document.getElementById('registerError');
-  const showRegister = document.getElementById('showRegister');
-  const showLogin = document.getElementById('showLogin');
-  const displayUser = document.getElementById('displayUser');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const mobileLogout = document.getElementById('mobileLogout');
-
-  // ===== HÀM BĂM MẬT KHẨU =====
-  function hashPassword(password, salt) {
-    return sha256(password + salt);
-  }
-
-  // ===== KIỂM TRA KẾT NỐI TRƯỚC KHI GỌI FIRESTORE =====
-  function checkConnection() {
-    if (!isOnline) {
-      throw new Error('Không có kết nối Internet. Vui lòng kiểm tra lại.');
+  (function() {
+    // ----- PHÁT HIỆN MÔI TRƯỜNG -----
+    const isFileProtocol = window.location.protocol === 'file:';
+    if (isFileProtocol) {
+      document.getElementById('fileWarning').classList.remove('hidden');
+      // Vẫn hiển thị auth page nhưng vô hiệu hóa chức năng, chỉ hiển thị thông báo
+      document.getElementById('authPage').classList.remove('hidden');
+      // Ẩn app main
+      document.getElementById('appMain').classList.add('hidden');
+      // Vô hiệu hóa các nút
+      document.querySelectorAll('button').forEach(b => b.disabled = true);
+      return; // Dừng khởi tạo Firebase
     }
-  }
 
-  // ===== FORM CHUYỂN ĐỔI =====
-  showRegister.onclick = () => {
-    loginForm.classList.add('hidden');
-    registerForm.classList.remove('hidden');
-    clearErrors();
-  };
-  showLogin.onclick = () => {
-    registerForm.classList.add('hidden');
-    loginForm.classList.remove('hidden');
-    clearErrors();
-  };
-  function clearErrors() {
-    loginError.textContent = '';
-    registerError.textContent = '';
-  }
+    // ----- CẤU HÌNH FIREBASE -----
+    const firebaseConfig = {
+      apiKey: "AIzaSyBG7rSMk9FqD9GgNYwApXlsPBnxeyZi8qU",
+      authDomain: "xyzweb-906a1.firebaseapp.com",
+      projectId: "xyzweb-906a1",
+      storageBucket: "xyzweb-906a1.firebasestorage.app",
+      messagingSenderId: "268520089231",
+      appId: "1:268520089231:web:f9fcf91be875cda72272fa"
+    };
+    const CLOUDINARY_CLOUD_NAME = "diiwvsz3o";
+    const CLOUDINARY_UPLOAD_PRESET = "xyzweb";
 
-  // ===== ĐĂNG KÝ =====
-  registerBtn.onclick = async () => {
-    const username = regUsername.value.trim();
-    const password = regPassword.value;
-    const confirm = regConfirm.value;
+    // Khởi tạo Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    db.settings({ experimentalForceLongPolling: true, merge: true });
 
-    if (!username || !password || !confirm) {
-      registerError.textContent = 'Vui lòng điền đầy đủ thông tin.';
-      return;
+    // ===== HÀM BĂM MẬT KHẨU =====
+    function hashPassword(password, salt) {
+      return sha256(password + salt);
     }
-    if (password.length < 4) {
-      registerError.textContent = 'Mật khẩu tối thiểu 4 ký tự.';
-      return;
-    }
-    if (password !== confirm) {
-      registerError.textContent = 'Mật khẩu xác nhận không khớp.';
-      return;
-    }
-    try {
-      checkConnection();
-      const userDoc = await db.collection('users').doc(username).get();
-      if (userDoc.exists) {
-        registerError.textContent = 'Tên đăng nhập đã tồn tại.';
-        return;
-      }
-      const salt = username + 'media_vault_salt_2024';
-      const hashed = hashPassword(password, salt);
-      await db.collection('users').doc(username).set({
-        username: username,
-        passwordHash: hashed,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      regUsername.value = '';
-      regPassword.value = '';
-      regConfirm.value = '';
-      registerForm.classList.add('hidden');
-      loginForm.classList.remove('hidden');
-      loginError.textContent = 'Đăng ký thành công. Mời bạn đăng nhập.';
-    } catch (e) {
-      if (e.message.includes('offline') || e.message.includes('Failed to get document')) {
-        registerError.textContent = 'Không thể kết nối tới máy chủ. Kiểm tra mạng và thử lại.';
-      } else {
+
+    // ===== APP STATE =====
+    let currentUser = null;
+    let currentFolderId = null;
+    let foldersCache = [];
+
+    // Elements
+    const authPage = document.getElementById('authPage');
+    const appMain = document.getElementById('appMain');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginUsername = document.getElementById('loginUsername');
+    const loginPassword = document.getElementById('loginPassword');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+    const regUsername = document.getElementById('regUsername');
+    const regPassword = document.getElementById('regPassword');
+    const regConfirm = document.getElementById('regConfirm');
+    const registerBtn = document.getElementById('registerBtn');
+    const registerError = document.getElementById('registerError');
+    const showRegister = document.getElementById('showRegister');
+    const showLogin = document.getElementById('showLogin');
+    const displayUser = document.getElementById('displayUser');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const mobileLogout = document.getElementById('mobileLogout');
+
+    // Form toggle
+    showRegister.onclick = () => { loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); clearErrors(); };
+    showLogin.onclick = () => { registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); clearErrors(); };
+    function clearErrors() { loginError.textContent = ''; registerError.textContent = ''; }
+
+    // ===== ĐĂNG KÝ =====
+    registerBtn.onclick = async () => {
+      const username = regUsername.value.trim();
+      const password = regPassword.value;
+      const confirm = regConfirm.value;
+      if (!username || !password || !confirm) { registerError.textContent = 'Vui lòng điền đầy đủ.'; return; }
+      if (password.length < 4) { registerError.textContent = 'Mật khẩu tối thiểu 4 ký tự.'; return; }
+      if (password !== confirm) { registerError.textContent = 'Xác nhận mật khẩu không khớp.'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(username).get();
+        if (userDoc.exists) { registerError.textContent = 'Tên đăng nhập đã tồn tại.'; return; }
+        const salt = username + 'media_vault_salt_2024';
+        const hashed = hashPassword(password, salt);
+        await db.collection('users').doc(username).set({
+          username, passwordHash: hashed,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        regUsername.value = ''; regPassword.value = ''; regConfirm.value = '';
+        registerForm.classList.add('hidden'); loginForm.classList.remove('hidden');
+        loginError.textContent = 'Đăng ký thành công. Mời đăng nhập.';
+      } catch (e) {
         registerError.textContent = 'Lỗi: ' + e.message;
       }
-    }
-  };
+    };
 
-  // ===== ĐĂNG NHẬP =====
-  loginBtn.onclick = async () => {
-    const username = loginUsername.value.trim();
-    const password = loginPassword.value;
-    if (!username || !password) {
-      loginError.textContent = 'Vui lòng nhập tên đăng nhập và mật khẩu.';
-      return;
-    }
-    try {
-      checkConnection();
-      const userDoc = await db.collection('users').doc(username).get();
-      if (!userDoc.exists) {
-        loginError.textContent = 'Tài khoản không tồn tại.';
-        return;
-      }
-      const userData = userDoc.data();
-      const salt = username + 'media_vault_salt_2024';
-      const hashedInput = hashPassword(password, salt);
-      if (hashedInput === userData.passwordHash) {
-        currentUser = username;
-        localStorage.setItem('mediaVaultUser', username);
-        displayUser.textContent = username;
-        authPage.classList.add('hidden');
-        appMain.classList.remove('hidden');
-        loadFolders();
-        loadMedia();
-        loginUsername.value = '';
-        loginPassword.value = '';
-        loginError.textContent = '';
-      } else {
-        loginError.textContent = 'Sai mật khẩu.';
-      }
-    } catch (e) {
-      if (e.message.includes('offline') || e.message.includes('Failed to get document')) {
-        loginError.textContent = 'Không thể kết nối tới máy chủ. Kiểm tra mạng và thử lại.';
-      } else {
+    // ===== ĐĂNG NHẬP =====
+    loginBtn.onclick = async () => {
+      const username = loginUsername.value.trim();
+      const password = loginPassword.value;
+      if (!username || !password) { loginError.textContent = 'Vui lòng nhập đầy đủ.'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(username).get();
+        if (!userDoc.exists) { loginError.textContent = 'Tài khoản không tồn tại.'; return; }
+        const userData = userDoc.data();
+        const salt = username + 'media_vault_salt_2024';
+        if (hashPassword(password, salt) === userData.passwordHash) {
+          currentUser = username;
+          localStorage.setItem('mediaVaultUser', username);
+          displayUser.textContent = username;
+          authPage.classList.add('hidden');
+          appMain.classList.remove('hidden');
+          loadFolders();
+          loadMedia();
+          loginUsername.value = ''; loginPassword.value = '';
+          loginError.textContent = '';
+        } else {
+          loginError.textContent = 'Sai mật khẩu.';
+        }
+      } catch (e) {
         loginError.textContent = 'Lỗi: ' + e.message;
       }
+    };
+
+    // ===== ĐĂNG XUẤT =====
+    function doLogout() {
+      currentUser = null;
+      localStorage.removeItem('mediaVaultUser');
+      authPage.classList.remove('hidden');
+      appMain.classList.add('hidden');
+      loginForm.classList.remove('hidden');
+      registerForm.classList.add('hidden');
+      clearErrors();
     }
-  };
+    logoutBtn.onclick = doLogout;
+    mobileLogout.onclick = doLogout;
 
-  // ===== ĐĂNG XUẤT =====
-  function doLogout() {
-    currentUser = null;
-    localStorage.removeItem('mediaVaultUser');
-    authPage.classList.remove('hidden');
-    appMain.classList.add('hidden');
-    loginForm.classList.remove('hidden');
-    registerForm.classList.add('hidden');
-    loginUsername.value = '';
-    loginPassword.value = '';
-    clearErrors();
-  }
-  logoutBtn.onclick = doLogout;
-  mobileLogout.onclick = doLogout;
-
-  // ===== KIỂM TRA ĐĂNG NHẬP KHI TẢI TRANG =====
-  async function checkSavedLogin() {
-    const savedUser = localStorage.getItem('mediaVaultUser');
-    if (savedUser) {
-      try {
-        checkConnection();
-        const doc = await db.collection('users').doc(savedUser).get();
-        if (doc.exists) {
-          currentUser = savedUser;
-          displayUser.textContent = savedUser;
+    // ===== KIỂM TRA PHIÊN =====
+    async function checkSavedLogin() {
+      const saved = localStorage.getItem('mediaVaultUser');
+      if (saved) {
+        const userDoc = await db.collection('users').doc(saved).get();
+        if (userDoc.exists) {
+          currentUser = saved;
+          displayUser.textContent = saved;
           authPage.classList.add('hidden');
           appMain.classList.remove('hidden');
           loadFolders();
           loadMedia();
         } else {
           localStorage.removeItem('mediaVaultUser');
-          showAuthPage();
+          showAuth();
         }
-      } catch (e) {
-        // Nếu lỗi kết nối, vẫn cho phép vào app với dữ liệu local (không cần mạng)
-        currentUser = savedUser;
-        displayUser.textContent = savedUser + ' (ngoại tuyến)';
-        authPage.classList.add('hidden');
-        appMain.classList.remove('hidden');
-        // Không tải folders/media nếu mất mạng
-        document.getElementById('mediaGallery').innerHTML = '<p>Đang ngoại tuyến. Không thể tải dữ liệu.</p>';
+      } else {
+        showAuth();
       }
-    } else {
-      showAuthPage();
     }
-  }
+    function showAuth() {
+      authPage.classList.remove('hidden');
+      appMain.classList.add('hidden');
+    }
 
-  function showAuthPage() {
-    authPage.classList.remove('hidden');
-    appMain.classList.add('hidden');
-    loginForm.classList.remove('hidden');
-    registerForm.classList.add('hidden');
-  }
+    // ===== MENU =====
+    function switchPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-'+page).classList.add('active');
+      document.querySelectorAll('.menu-item, .bottom-nav .nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelector(`.menu-item[data-page="${page}"]`)?.classList.add('active');
+      document.querySelector(`.bottom-nav .nav-item[data-page="${page}"]`)?.classList.add('active');
+    }
+    document.querySelectorAll('.menu-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
+    document.querySelectorAll('.bottom-nav .nav-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
 
-  // ===== MENU & THƯ MỤC =====
-  function switchPage(page) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-'+page).classList.add('active');
-    document.querySelectorAll('.menu-item, .bottom-nav .nav-item').forEach(i => i.classList.remove('active'));
-    document.querySelector(`.menu-item[data-page="${page}"]`)?.classList.add('active');
-    document.querySelector(`.bottom-nav .nav-item[data-page="${page}"]`)?.classList.add('active');
-  }
-  document.querySelectorAll('.menu-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
-  document.querySelectorAll('.bottom-nav .nav-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
-
-  async function loadFolders() {
-    if (!currentUser || !isOnline) return;
-    try {
-      const snapshot = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
-      foldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // ===== FOLDERS =====
+    async function loadFolders() {
+      const snap = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
+      foldersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderFolders();
-    } catch (e) {
-      console.error('Không thể tải thư mục:', e);
     }
-  }
-
-  function renderFolders() {
-    const folderList = document.getElementById('folderList');
-    const folderTabs = document.getElementById('folderTabs');
-    const uploadSelect = document.getElementById('uploadFolderSelect');
-    folderList.innerHTML = '';
-    folderTabs.innerHTML = '<span class="folder-tab active" data-folder="">Tất cả</span>';
-    uploadSelect.innerHTML = '<option value="">-- Thư mục gốc --</option>';
-    foldersCache.forEach(f => {
-      folderList.innerHTML += `<div class="folder-item" data-folder="${f.id}">📁 ${f.name}</div>`;
-      folderTabs.innerHTML += `<span class="folder-tab" data-folder="${f.id}">${f.name}</span>`;
-      uploadSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
-    });
-    document.querySelectorAll('.folder-item').forEach(el => el.onclick = () => {
-      currentFolderId = el.dataset.folder;
-      document.getElementById('libraryTitle').textContent = '📁 ' + el.textContent.trim();
-      switchPage('library');
-      loadMedia();
-    });
-    document.querySelectorAll('.folder-tab').forEach(tab => {
-      tab.onclick = () => {
-        currentFolderId = tab.dataset.folder === '' ? null : tab.dataset.folder;
-        document.getElementById('libraryTitle').textContent = tab.dataset.folder === '' ? '📚 Tất cả' : '📁 ' + tab.textContent;
-        document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        loadMedia();
-      };
-    });
-  }
-
-  document.getElementById('createFolderBtn').onclick = async () => {
-    const name = document.getElementById('newFolderName').value.trim();
-    if (!name || !currentUser) return;
-    try {
-      checkConnection();
+    function renderFolders() {
+      const folderList = document.getElementById('folderList');
+      const folderTabs = document.getElementById('folderTabs');
+      const uploadSelect = document.getElementById('uploadFolderSelect');
+      folderList.innerHTML = '';
+      folderTabs.innerHTML = '<span class="folder-tab active" data-folder="">Tất cả</span>';
+      uploadSelect.innerHTML = '<option value="">-- Thư mục gốc --</option>';
+      foldersCache.forEach(f => {
+        folderList.innerHTML += `<div class="folder-item" data-folder="${f.id}">📁 ${f.name}</div>`;
+        folderTabs.innerHTML += `<span class="folder-tab" data-folder="${f.id}">${f.name}</span>`;
+        uploadSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
+      });
+      document.querySelectorAll('.folder-item').forEach(el => {
+        el.onclick = () => {
+          currentFolderId = el.dataset.folder;
+          document.getElementById('libraryTitle').textContent = '📁 ' + el.textContent.trim();
+          switchPage('library');
+          loadMedia();
+        };
+      });
+      document.querySelectorAll('.folder-tab').forEach(tab => {
+        tab.onclick = () => {
+          currentFolderId = tab.dataset.folder === '' ? null : tab.dataset.folder;
+          document.getElementById('libraryTitle').textContent = tab.dataset.folder === '' ? '📚 Tất cả' : '📁 ' + tab.textContent;
+          document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          loadMedia();
+        };
+      });
+    }
+    document.getElementById('createFolderBtn').onclick = async () => {
+      const name = document.getElementById('newFolderName').value.trim();
+      if (!name) return;
       await db.collection('users').doc(currentUser).collection('folders').add({ name });
       document.getElementById('newFolderName').value = '';
       loadFolders();
-    } catch (e) {
-      alert('Không thể tạo thư mục khi ngoại tuyến.');
-    }
-  };
+    };
 
-  // ===== UPLOAD =====
-  const fileInput = document.getElementById('fileInput');
-  const fileName = document.getElementById('fileName');
-  const uploadBtn = document.getElementById('uploadBtn');
-  const uploadStatus = document.getElementById('uploadStatus');
-  const uploadFolderSelect = document.getElementById('uploadFolderSelect');
+    // ===== UPLOAD =====
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadStatus = document.getElementById('uploadStatus');
 
-  fileInput.onchange = () => {
-    fileName.textContent = fileInput.files[0] ? `📎 ${fileInput.files[0].name}` : 'Chưa chọn';
-  };
+    fileInput.onchange = () => {
+      fileName.textContent = fileInput.files[0] ? `📎 ${fileInput.files[0].name}` : 'Chưa chọn';
+    };
 
-  uploadBtn.onclick = async () => {
-    if (!currentUser) return;
-    const file = fileInput.files[0];
-    if (!file) { uploadStatus.textContent = 'Chọn tệp'; return; }
-    if (!isOnline) {
-      uploadStatus.textContent = '❌ Không có kết nối Internet.';
-      return;
-    }
-    uploadStatus.textContent = '⏳ Đang tải lên Cloudinary...';
-    try {
+    uploadBtn.onclick = async () => {
+      const file = fileInput.files[0];
+      if (!file) { uploadStatus.textContent = 'Chọn tệp'; return; }
+      uploadStatus.textContent = '⏳ Đang tải lên Cloudinary...';
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
-        method: 'POST',
-        body: formData
-      });
-      const cloudData = await res.json();
-      if (cloudData.error) throw new Error(cloudData.error.message);
-      const folderId = uploadFolderSelect.value || null;
-      const mediaDoc = {
-        url: cloudData.secure_url,
-        public_id: cloudData.public_id,
-        resource_type: cloudData.resource_type,
-        original_name: file.name,
-        size: cloudData.bytes,
-        folder_id: folderId,
-        created_at: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      await db.collection('users').doc(currentUser).collection('media').add(mediaDoc);
-      uploadStatus.textContent = '✅ Upload thành công!';
-      fileInput.value = '';
-      fileName.textContent = 'Chưa chọn';
-      switchPage('library');
-      loadMedia();
-      loadFolders();
-    } catch (e) {
-      uploadStatus.textContent = '❌ ' + (e.message.includes('Failed to fetch') ? 'Lỗi mạng hoặc Cloudinary.' : e.message);
-    }
-  };
+      try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
+          method: 'POST', body: formData
+        });
+        const cloudData = await res.json();
+        if (cloudData.error) throw new Error(cloudData.error.message);
+        const folderId = document.getElementById('uploadFolderSelect').value || null;
+        const mediaDoc = {
+          url: cloudData.secure_url,
+          public_id: cloudData.public_id,
+          resource_type: cloudData.resource_type,
+          original_name: file.name,
+          size: cloudData.bytes,
+          folder_id: folderId
+        };
+        await db.collection('users').doc(currentUser).collection('media').add({
+          ...mediaDoc,
+          created_at: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        uploadStatus.textContent = '✅ Upload thành công!';
+        fileInput.value = ''; fileName.textContent = 'Chưa chọn';
+        switchPage('library');
+        loadMedia();
+        loadFolders();
+      } catch (e) {
+        uploadStatus.textContent = '❌ ' + e.message;
+      }
+    };
 
-  // ===== LOAD MEDIA =====
-  async function loadMedia() {
-    if (!currentUser) return;
-    if (!isOnline) {
-      document.getElementById('mediaGallery').innerHTML = '<p>Đang ngoại tuyến. Không thể tải ảnh/video.</p>';
-      return;
-    }
-    try {
+    // ===== LOAD MEDIA =====
+    async function loadMedia() {
       let query = db.collection('users').doc(currentUser).collection('media').orderBy('created_at', 'desc');
-      if (currentFolderId) {
-        query = query.where('folder_id', '==', currentFolderId);
-      }
-      const snapshot = await query.get();
-      const files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (currentFolderId) query = query.where('folder_id', '==', currentFolderId);
+      const snap = await query.get();
+      const files = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderMedia(files);
-    } catch (e) {
-      document.getElementById('mediaGallery').innerHTML = `<p>Lỗi tải dữ liệu: ${e.message}</p>`;
     }
-  }
 
-  function renderMedia(files) {
-    const gallery = document.getElementById('mediaGallery');
-    gallery.innerHTML = '';
-    if (!files.length) {
-      gallery.innerHTML = '<p>Chưa có tệp.</p>';
-      return;
-    }
-    files.forEach(file => {
-      const card = document.createElement('div');
-      card.className = 'media-card';
-      let el;
-      if (file.resource_type === 'video') {
-        el = document.createElement('video');
-        el.src = file.url;
-        el.controls = true;
-      } else {
-        el = document.createElement('img');
-        el.src = file.url;
-        el.alt = file.original_name;
+    function renderMedia(files) {
+      const gallery = document.getElementById('mediaGallery');
+      gallery.innerHTML = '';
+      if (!files.length) {
+        gallery.innerHTML = '<p>Chưa có tệp.</p>';
+        return;
       }
-      card.appendChild(el);
-      const info = document.createElement('div');
-      info.className = 'media-info';
-      info.innerHTML = `<span>${file.original_name}</span>`;
-      const delBtn = document.createElement('button');
-      delBtn.className = 'delete-btn';
-      delBtn.textContent = 'Xóa';
-      delBtn.onclick = async (e) => {
-        e.stopPropagation();
-        if (!confirm('Xóa?')) return;
-        try {
-          await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/delete_by_token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: file.public_id })
-          });
-          await db.collection('users').doc(currentUser).collection('media').doc(file.id).delete();
-          loadMedia();
-        } catch (err) {
-          alert('Không thể xóa: ' + err.message);
-        }
-      };
-      info.appendChild(delBtn);
-      card.appendChild(info);
-      gallery.appendChild(card);
-    });
-  }
+      files.forEach(file => {
+        const card = document.createElement('div');
+        card.className = 'media-card';
+        const el = file.resource_type === 'video' ? document.createElement('video') : document.createElement('img');
+        el.src = file.url;
+        if (el.tagName === 'VIDEO') el.controls = true;
+        card.appendChild(el);
+        const info = document.createElement('div');
+        info.className = 'media-info';
+        info.innerHTML = `<span>${file.original_name}</span>`;
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-btn';
+        delBtn.textContent = 'Xóa';
+        delBtn.onclick = async (e) => {
+          e.stopPropagation();
+          if (!confirm('Xóa?')) return;
+          try {
+            if (file.public_id) {
+              await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/delete_by_token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: file.public_id })
+              });
+            }
+            await db.collection('users').doc(currentUser).collection('media').doc(file.id).delete();
+            loadMedia();
+          } catch (err) {
+            alert('Lỗi xóa: ' + err.message);
+          }
+        };
+        info.appendChild(delBtn);
+        card.appendChild(info);
+        gallery.appendChild(card);
+      });
+    }
 
-  // ===== KHỞI ĐỘNG =====
-  checkSavedLogin();
+    // ===== KHỞI ĐỘNG =====
+    checkSavedLogin();
+  })();
 </script>
 </body>
 </html>
