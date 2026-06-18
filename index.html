@@ -27,12 +27,8 @@
       flex-direction: column;
       overflow: hidden;
     }
-    .app-layout {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-    /* Sidebar (desktop) */
+    .app-layout { display: flex; flex: 1; overflow: hidden; }
+    /* Sidebar */
     .sidebar {
       width: 280px;
       background: rgba(18,24,40,0.95);
@@ -47,9 +43,7 @@
     @media (max-width: 768px) {
       .sidebar {
         position: fixed;
-        top: 0;
-        left: 0;
-        bottom: 0;
+        top:0; left:0; bottom:0;
         transform: translateX(-100%);
         box-shadow: 2px 0 20px rgba(0,0,0,0.5);
       }
@@ -57,15 +51,12 @@
       .mobile-menu-btn {
         display: flex !important;
         position: fixed;
-        top: 1rem;
-        left: 1rem;
+        top: 1rem; left: 1rem;
         z-index: 40;
         background: var(--bg-card);
         border-radius: 50%;
-        width: 42px;
-        height: 42px;
-        align-items: center;
-        justify-content: center;
+        width: 42px; height: 42px;
+        align-items: center; justify-content: center;
         cursor: pointer;
         color: white;
         font-size: 1.4rem;
@@ -82,85 +73,63 @@
       gap: 0.5rem;
       justify-content: space-between;
     }
-    .sidebar-close-mobile {
-      display: none;
-      background: none;
-      border: none;
-      color: white;
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
+    .sidebar-close-mobile { display: none; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
     @media (max-width: 768px) { .sidebar-close-mobile { display: block; } }
     .nav-menu { display: flex; flex-direction: column; gap: 0.3rem; }
     .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-      padding: 0.8rem 1rem;
-      border-radius: 0.9rem;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-weight: 500;
-      transition: 0.15s;
+      display: flex; align-items: center; gap: 0.8rem;
+      padding: 0.8rem 1rem; border-radius: 0.9rem;
+      cursor: pointer; color: var(--text-secondary);
+      font-weight: 500; transition: 0.15s;
     }
     .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
     .nav-item.active { background: var(--accent); color: white; }
     .folders-section { margin-top: 1.5rem; flex:1; overflow-y:auto; }
     .folders-title {
       color: var(--text-secondary);
-      font-size: 0.8rem;
-      text-transform: uppercase;
+      font-size: 0.8rem; text-transform: uppercase;
       margin-bottom: 0.5rem;
     }
     .folder-list { display: flex; flex-direction: column; gap: 0.2rem; }
     .folder-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.6rem 0.8rem;
-      border-radius: 0.7rem;
-      cursor: pointer;
-      color: var(--text-secondary);
-      position: relative;
-      transition: 0.15s;
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 0.8rem; border-radius: 0.7rem;
+      cursor: pointer; color: var(--text-secondary);
+      position: relative; transition: 0.15s;
     }
     .folder-item i { color: #fbbf24; }
     .folder-item.active { background: rgba(79,140,255,0.15); color: white; }
-    .folder-item .rename-btn {
+    .folder-item .folder-actions {
       display: none;
       margin-left: auto;
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      cursor: pointer;
-      padding: 0.2rem 0.4rem;
-      border-radius: 0.4rem;
+      gap: 0.3rem;
     }
-    .folder-item:hover .rename-btn { display: block; }
+    .folder-item:hover .folder-actions { display: flex; }
+    .folder-item .folder-actions button {
+      background: none; border: none; color: var(--text-secondary);
+      cursor: pointer; padding: 0.2rem 0.3rem; border-radius: 0.3rem;
+    }
+    .folder-item .folder-actions button:hover { color: white; background: rgba(255,255,255,0.1); }
     .add-folder { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .add-folder input {
-      flex:1; padding:0.5rem; background: var(--bg-card); border:1px solid var(--border);
-      border-radius:0.6rem; color:white; outline:none;
+      flex:1; padding:0.5rem; background: var(--bg-card);
+      border:1px solid var(--border); border-radius:0.6rem;
+      color:white; outline:none;
     }
     .add-folder button {
-      padding:0.5rem 0.8rem; background: var(--accent); border:none; border-radius:0.6rem; color:white; cursor:pointer;
+      padding:0.5rem 0.8rem; background: var(--accent);
+      border:none; border-radius:0.6rem; color:white; cursor:pointer;
     }
     .sidebar-footer {
-      margin-top: auto;
-      border-top:1px solid var(--border);
-      padding-top:1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--text-secondary);
+      margin-top: auto; border-top:1px solid var(--border);
+      padding-top:1rem; display: flex; align-items: center;
+      gap: 0.5rem; color: var(--text-secondary);
     }
     .logout-btn-sidebar { margin-left: auto; color: var(--danger); cursor: pointer; }
 
     /* Main content */
     .main-content {
-      flex:1;
-      overflow-y:auto;
-      padding: 2rem;
+      flex:1; overflow-y:auto; padding: 2rem;
       background: var(--bg-secondary);
       -webkit-overflow-scrolling: touch;
     }
@@ -176,43 +145,26 @@
       gap: 0.8rem;
       margin-top: 1rem;
     }
-    @media (max-width: 768px) {
-      .gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
-    }
+    @media (max-width: 768px) { .gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; } }
     .media-card {
-      position: relative;
-      border-radius: 1rem;
-      overflow: hidden;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      cursor: pointer;
+      position: relative; border-radius: 1rem;
+      overflow: hidden; background: var(--bg-card);
+      border: 1px solid var(--border); cursor: pointer;
       transition: transform 0.15s;
     }
     .media-card:active { transform: scale(0.97); }
     .media-card img {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-      display: block;
+      width: 100%; height: 200px; object-fit: cover; display: block;
     }
     @media (max-width: 768px) { .media-card img { height: 160px; } }
     .media-card .delete-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 2;
-      opacity: 0;
-      transition: opacity 0.2s;
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(0,0,0,0.6); color: white;
+      border: none; border-radius: 50%;
+      width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 2;
+      opacity: 0; transition: opacity 0.2s;
     }
     .media-card:hover .delete-btn, .media-card:active .delete-btn { opacity: 1; }
     @media (max-width: 768px) { .media-card .delete-btn { opacity: 1; } }
@@ -220,160 +172,90 @@
     /* Upload */
     .upload-zone {
       border: 2px dashed rgba(255,255,255,0.2);
-      border-radius: 1.2rem;
-      padding: 2rem;
-      text-align: center;
-      margin: 1rem 0;
-      cursor: pointer;
-      transition: 0.2s;
+      border-radius: 1.2rem; padding: 2rem;
+      text-align: center; margin: 1rem 0;
+      cursor: pointer; transition: 0.2s;
     }
     .upload-zone:hover { border-color: var(--accent); }
 
     /* Folder select */
     .folder-tabs-desktop { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .folder-tab {
-      padding: 0.4rem 1rem;
-      border-radius: 2rem;
-      background: rgba(255,255,255,0.05);
-      cursor: pointer;
+      padding: 0.4rem 1rem; border-radius: 2rem;
+      background: rgba(255,255,255,0.05); cursor: pointer;
       color: var(--text-secondary);
     }
     .folder-tab.active { background: var(--accent); color: white; }
     @media (max-width: 768px) { .folder-tabs-desktop { display: none; } }
-
     .folder-select-mobile {
-      display: none;
-      width: 100%;
-      padding: 0.8rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 0.8rem;
-      color: white;
-      margin-bottom: 1rem;
-      font-size: 1rem;
+      display: none; width: 100%; padding: 0.8rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 0.8rem; color: white;
+      margin-bottom: 1rem; font-size: 1rem;
     }
     @media (max-width: 768px) { .folder-select-mobile { display: block; } }
 
     /* Bottom nav */
     .bottom-nav {
-      display: none;
-      background: var(--bg-secondary);
-      border-top: 1px solid var(--border);
-      padding: 0.5rem;
-      justify-content: space-around;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 25;
+      display: none; background: var(--bg-secondary);
+      border-top: 1px solid var(--border); padding: 0.5rem;
+      justify-content: space-around; position: fixed;
+      bottom:0; left:0; right:0; z-index: 25;
     }
     @media (max-width: 768px) {
       .bottom-nav { display: flex; }
       .main-content { padding-bottom: 5rem; }
     }
     .bottom-nav .nav-item {
-      flex-direction: column;
-      font-size: 0.7rem;
-      color: var(--text-secondary);
-      background: transparent;
-      box-shadow: none;
-      display: flex;
-      align-items: center;
-      gap: 0.2rem;
+      flex-direction: column; font-size: 0.7rem;
+      color: var(--text-secondary); background: transparent;
+      box-shadow: none; display: flex; align-items: center; gap: 0.2rem;
     }
     .bottom-nav .nav-item.active { color: var(--accent); }
 
     /* Viewer */
     .viewer-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.96);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s;
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.96); z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
     }
     .viewer-overlay.active { opacity: 1; pointer-events: auto; }
     .viewer-content {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
+      width:100%; height:100%; display: flex;
+      align-items: center; justify-content: center; position: relative;
     }
     .viewer-media {
-      max-width: 95%;
-      max-height: 90%;
-      object-fit: contain;
-      border-radius: 0.5rem;
-      user-select: none;
-      -webkit-user-select: none;
+      max-width:95%; max-height:90%; object-fit: contain;
+      border-radius:0.5rem; user-select:none; -webkit-user-select:none;
       transition: transform 0.2s ease-out;
     }
     .viewer-close {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      border: none;
-      font-size: 2rem;
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      cursor: pointer;
-      z-index: 5;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: absolute; top:20px; right:20px;
+      background: rgba(0,0,0,0.6); color: white;
+      border: none; font-size:2rem; width:46px; height:46px;
+      border-radius:50%; cursor: pointer; z-index:5;
+      display: flex; align-items: center; justify-content: center;
     }
     .viewer-nav {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(255,255,255,0.25);
-      color: white;
-      border: none;
-      font-size: 2rem;
-      padding: 0.4rem 0.8rem;
-      cursor: pointer;
-      border-radius: 0.5rem;
-      z-index: 5;
-      transition: opacity 0.3s;
-      opacity: 0;
+      position: absolute; top:50%; transform: translateY(-50%);
+      background: rgba(255,255,255,0.25); color: white;
+      border: none; font-size:2rem; padding:0.4rem 0.8rem;
+      cursor: pointer; border-radius:0.5rem; z-index:5;
+      transition: opacity 0.3s; opacity: 0;
     }
     .viewer-overlay.interacting .viewer-nav { opacity: 1; }
-    .viewer-prev { left: 10px; }
-    .viewer-next { right: 10px; }
+    .viewer-prev { left:10px; } .viewer-next { right:10px; }
     .viewer-counter {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
+      position: absolute; bottom:20px; left:50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 0.3rem 0.8rem;
-      border-radius: 1rem;
-      font-size: 0.9rem;
+      background: rgba(0,0,0,0.6); color: white;
+      padding:0.3rem 0.8rem; border-radius:1rem; font-size:0.9rem;
     }
     .hidden { display: none !important; }
-    .rename-input {
-      background: var(--bg-input, #252d3f);
-      border: 1px solid var(--accent);
-      border-radius: 0.5rem;
-      color: white;
-      padding: 0.3rem 0.5rem;
-      width: 120px;
-      outline: none;
-    }
   </style>
 </head>
 <body>
-<!-- Nút mở sidebar trên mobile -->
 <div class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></div>
 
 <!-- Auth Page -->
@@ -400,7 +282,6 @@
 <!-- App -->
 <div id="appMain" class="hidden" style="display:flex; flex-direction:column; height:100vh;">
   <div class="app-layout">
-    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <span><i class="fas fa-cloud-upload-alt"></i> Vault</span>
@@ -424,9 +305,7 @@
       </div>
     </aside>
 
-    <!-- Main -->
     <main class="main-content" id="mainContent">
-      <!-- Page Library -->
       <div id="page-library" class="page active">
         <h2 id="libraryTitle"><i class="fas fa-photo-video"></i> Tất cả</h2>
         <select id="folderSelectMobile" class="folder-select-mobile"></select>
@@ -434,7 +313,6 @@
         <div class="gallery" id="mediaGallery"></div>
       </div>
 
-      <!-- Page Upload -->
       <div id="page-upload" class="page">
         <h2><i class="fas fa-cloud-upload-alt"></i> Tải lên</h2>
         <div class="upload-zone" id="uploadZone">
@@ -453,7 +331,6 @@
       </div>
     </main>
   </div>
-  <!-- Bottom nav -->
   <div class="bottom-nav">
     <div class="nav-item active" data-page="library"><i class="fas fa-images"></i><span>Thư viện</span></div>
     <div class="nav-item" data-page="upload"><i class="fas fa-upload"></i><span>Tải lên</span></div>
@@ -461,7 +338,7 @@
   </div>
 </div>
 
-<!-- Viewer Modal -->
+<!-- Viewer -->
 <div class="viewer-overlay" id="viewerOverlay">
   <button class="viewer-close" id="viewerClose"><i class="fas fa-times"></i></button>
   <button class="viewer-nav viewer-prev" id="viewerPrev"><i class="fas fa-chevron-left"></i></button>
@@ -503,7 +380,7 @@
     const showRegister = $('#showRegister'), showLogin = $('#showLogin');
     const displayUser = $('#displayUser'), logoutBtn = $('#logoutBtn'), mobileLogout = $('#mobileLogout');
 
-    // App elements
+    // App
     const sidebar = $('#sidebar'), mobileMenuBtn = $('#mobileMenuBtn'), sidebarCloseMobile = $('#sidebarCloseMobile');
     const folderList = $('#folderList'), folderTabsDesktop = $('#folderTabsDesktop'), folderSelectMobile = $('#folderSelectMobile');
     const uploadFolderSelect = $('#uploadFolderSelect'), mediaGallery = $('#mediaGallery'), libraryTitle = $('#libraryTitle');
@@ -512,10 +389,8 @@
     const viewerOverlay = $('#viewerOverlay'), viewerContent = $('#viewerContent'), viewerClose = $('#viewerClose');
     const viewerPrev = $('#viewerPrev'), viewerNext = $('#viewerNext'), viewerCounter = $('#viewerCounter');
 
-    // Mobile sidebar toggle
     mobileMenuBtn.addEventListener('click', () => sidebar.classList.add('open'));
     sidebarCloseMobile.addEventListener('click', () => sidebar.classList.remove('open'));
-    // Đóng sidebar khi bấm ra ngoài (click vào main)
     $('#mainContent').addEventListener('click', () => { if (window.innerWidth <= 768) sidebar.classList.remove('open'); });
 
     function hash(p, s) { return sha256(p + s); }
@@ -614,7 +489,10 @@
         folderList.innerHTML += `
           <div class="folder-item" data-folder="${f.id}">
             <i class="fas fa-folder"></i> <span class="folder-name">${f.name}</span>
-            <button class="rename-btn" data-id="${f.id}" data-name="${f.name}"><i class="fas fa-pen"></i></button>
+            <div class="folder-actions">
+              <button class="rename-folder-btn" data-id="${f.id}" data-name="${f.name}" title="Đổi tên"><i class="fas fa-pen"></i></button>
+              <button class="delete-folder-btn" data-id="${f.id}" data-name="${f.name}" title="Xóa"><i class="fas fa-trash-alt"></i></button>
+            </div>
           </div>`;
         folderTabsDesktop.innerHTML += `<span class="folder-tab" data-folder="${f.id}">${f.name}</span>`;
         folderSelectMobile.innerHTML += `<option value="${f.id}">${f.name}</option>`;
@@ -624,7 +502,7 @@
       // Folder item click
       document.querySelectorAll('.folder-item').forEach(el => {
         el.addEventListener('click', (e) => {
-          if (e.target.closest('.rename-btn')) return; // nếu bấm nút rename
+          if (e.target.closest('.folder-actions')) return;
           currentFolderId = el.dataset.folder;
           libraryTitle.innerHTML = `<i class="fas fa-folder-open"></i> ${el.querySelector('.folder-name').textContent}`;
           switchPage('library');
@@ -633,8 +511,8 @@
         });
       });
 
-      // Rename button
-      document.querySelectorAll('.rename-btn').forEach(btn => {
+      // Rename
+      document.querySelectorAll('.rename-folder-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const folderId = btn.dataset.id;
@@ -643,6 +521,22 @@
           if (newName && newName.trim() !== '' && newName.trim() !== oldName) {
             await db.collection('users').doc(currentUser).collection('folders').doc(folderId).update({ name: newName.trim() });
             loadFolders();
+          }
+        });
+      });
+
+      // Delete folder
+      document.querySelectorAll('.delete-folder-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const folderId = btn.dataset.id;
+          const folderName = btn.dataset.name;
+          if (confirm(`Xóa thư mục "${folderName}"? Các ảnh/video trong đó sẽ được chuyển về thư mục gốc.`)) {
+            await db.collection('users').doc(currentUser).collection('folders').doc(folderId).delete();
+            // Cập nhật cache media: các media có folder_id này sẽ được set về null
+            allMediaCache = allMediaCache.map(m => m.folder_id === folderId ? {...m, folder_id: null} : m);
+            loadFolders();
+            applyFilter();
           }
         });
       });
@@ -689,12 +583,11 @@
       renderMedia(filtered);
     }
 
-    // Helper tạo thumbnail URL từ Cloudinary (video -> image)
     function getThumbnailUrl(file) {
       if (file.resource_type === 'video' && file.public_id) {
         return `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/so_1,f_jpg,w_400,h_300,c_fill/${file.public_id}.jpg`;
       }
-      return file.url; // ảnh giữ nguyên
+      return file.url;
     }
 
     fileInput.onchange = () => fileNameEl.innerHTML = fileInput.files[0] ? `<i class="far fa-file"></i> ${fileInput.files[0].name}` : '<i class="far fa-file"></i> Chưa có tệp';
@@ -755,7 +648,7 @@
       mediaGallery.appendChild(frag);
     }
 
-    // Viewer logic
+    // Viewer
     let viewerFiles = [], viewerIndex = 0;
     let touchStartX = 0, touchDist = 0, isDragging = false;
     let hideControlsTimer;
@@ -764,7 +657,7 @@
       viewerFiles = files;
       viewerIndex = index;
       viewerOverlay.classList.add('active');
-      viewerOverlay.classList.add('interacting'); // show nav initially
+      viewerOverlay.classList.add('interacting');
       clearTimeout(hideControlsTimer);
       hideControlsTimer = setTimeout(() => viewerOverlay.classList.remove('interacting'), 3000);
       updateViewer();
@@ -777,11 +670,7 @@
     }
 
     viewerClose.onclick = closeViewer;
-    viewerOverlay.addEventListener('click', (e) => {
-      if (e.target === viewerOverlay) closeViewer();
-    });
-
-    // Hiện controls khi chạm vào viewer
+    viewerOverlay.addEventListener('click', (e) => { if (e.target === viewerOverlay) closeViewer(); });
     viewerContent.addEventListener('click', () => {
       viewerOverlay.classList.add('interacting');
       clearTimeout(hideControlsTimer);
@@ -808,7 +697,6 @@
       viewerContent.appendChild(media);
       viewerCounter.textContent = `${viewerIndex+1}/${viewerFiles.length}`;
 
-      // Vuốt
       media.addEventListener('touchstart', e => {
         touchStartX = e.touches[0].clientX;
         media.style.transition = 'none';
@@ -842,7 +730,7 @@
       }
     });
 
-    // Kéo thả upload
+    // Kéo thả
     const uploadZone = $('#uploadZone');
     uploadZone.onclick = () => fileInput.click();
     uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor='var(--accent)'; });
