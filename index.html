@@ -284,6 +284,27 @@
       color: white;
       font-size: 0.85rem;
     }
+
+    .folder-link-btn {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 4;
+      font-size: 0.8rem;
+    }
+    .folder-link-btn:hover {
+      background: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -347,6 +368,7 @@
       <nav class="nav-menu">
         <div class="nav-item active" data-page="library"><i class="fas fa-images"></i> Thư viện</div>
         <div class="nav-item" data-page="upload"><i class="fas fa-upload"></i> Tải lên</div>
+        <div class="nav-item" data-page="random"><i class="fas fa-random"></i> Random</div>
       </nav>
       <div class="folders-section">
         <div class="folders-title">📁 Thư mục</div>
@@ -414,11 +436,21 @@
           <div id="uploadProgress" style="height:100%; background:var(--accent); border-radius:4px; width:0%; transition: width 0.2s;"></div>
         </div>
       </div>
+
+      <!-- Page Random -->
+      <div id="page-random" class="page">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+          <h2 id="randomTitle"><i class="fas fa-random"></i> Ngẫu nhiên (10 video/ảnh)</h2>
+          <button class="btn outline" id="refreshRandomBtn"><i class="fas fa-sync-alt"></i> Làm mới</button>
+        </div>
+        <div class="gallery" id="randomGallery"></div>
+      </div>
     </main>
   </div>
   <div class="bottom-nav">
     <div class="nav-item active" data-page="library"><i class="fas fa-images"></i><span>Thư viện</span></div>
     <div class="nav-item" data-page="upload"><i class="fas fa-upload"></i><span>Tải lên</span></div>
+    <div class="nav-item" data-page="random"><i class="fas fa-random"></i><span>Random</span></div>
     <div class="nav-item" id="mobileLogout"><i class="fas fa-sign-out-alt"></i><span>Thoát</span></div>
   </div>
 </div>
@@ -601,6 +633,8 @@
     const sidebar = $('#sidebar'), mobileMenuBtn = $('#mobileMenuBtn'), sidebarCloseMobile = $('#sidebarCloseMobile');
     const folderList = $('#folderList'), folderTabsDesktop = $('#folderTabsDesktop'), folderSelectMobile = $('#folderSelectMobile');
     const mediaGallery = $('#mediaGallery'), libraryTitle = $('#libraryTitle');
+    const randomGallery = $('#randomGallery');
+    const refreshRandomBtn = $('#refreshRandomBtn');
     const newFolderName = $('#newFolderName'), createFolderBtn = $('#createFolderBtn');
     const viewerOverlay = $('#viewerOverlay'), viewerContent = $('#viewerContent'), viewerCloseBtn = $('#viewerClose');
     const viewerPrev = $('#viewerPrev'), viewerNext = $('#viewerNext'), viewerCounter = $('#viewerCounter');
@@ -620,7 +654,7 @@
     const uploadStatus = $('#uploadStatus');
     const uploadProgress = $('#uploadProgress');
 
-    let filesToUpload = []; // { file, folderId }
+    let filesToUpload = [];
 
     // Rubber band
     let isDragging = false, dragStartX, dragStartY;
@@ -715,6 +749,7 @@
           await loadFolders();
           await loadAllMedia();
           applyFilter();
+          showRandomMedia();
           loginUsername.value=''; loginPassword.value='';
         } else { loginError.textContent='Sai mật khẩu.'; }
       } catch(e) { loginError.textContent = 'Lỗi: '+e.message; }
@@ -745,6 +780,7 @@
           await loadFolders();
           await loadAllMedia();
           applyFilter();
+          showRandomMedia();
           return;
         }
       }
@@ -759,6 +795,81 @@
       if (window.innerWidth <= 768) sidebar.classList.remove('open');
     }
     $$('.nav-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
+
+    // Random media
+    function showRandomMedia() {
+      if (!allMediaCache.length) {
+        randomGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Chưa có media nào.</p></div>';
+        return;
+      }
+      const videos = allMediaCache.filter(m => m.resource_type === 'video');
+      const images = allMediaCache.filter(m => m.resource_type === 'image');
+      let pool = [...videos];
+      // Nếu thiếu video, bổ sung ảnh
+      if (pool.length < 10) {
+        const shuffledImages = [...images].sort(() => Math.random() - 0.5);
+        const needed = 10 - pool.length;
+        pool = pool.concat(shuffledImages.slice(0, needed));
+      }
+      // Xáo trộn và lấy đúng 10 (hoặc ít hơn nếu tổng pool < 10)
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, Math.min(10, shuffled.length));
+      renderRandomMedia(selected);
+    }
+
+    function goToFolder(folderId) {
+      currentFolderId = folderId || '__unfiled__';
+      // Cập nhật tiêu đề và active folder
+      const folder = folderId ? foldersCache.find(f => f.id === folderId) : null;
+      libraryTitle.innerHTML = folder
+        ? `<i class="fas fa-folder-open"></i> ${folder.name}`
+        : (folderId === '__unfiled__' ? '<i class="fas fa-box-open"></i> Chưa phân loại' : '<i class="fas fa-photo-video"></i> Tất cả');
+      // Active folder item
+      document.querySelectorAll('#folderList .folder-item').forEach(el => el.classList.remove('active'));
+      const activeItem = document.querySelector(`#folderList .folder-item[data-folder="${currentFolderId}"]`);
+      if (activeItem) activeItem.classList.add('active');
+      // Chuyển tab thư viện
+      switchPage('library');
+      applyFilter();
+    }
+
+    function renderRandomMedia(files) {
+      randomGallery.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      files.forEach((file, index) => {
+        const isVideo = file.resource_type === 'video';
+        const card = document.createElement('div');
+        card.className = 'media-card' + (isVideo ? ' video-thumb' : ' image-thumb');
+        const img = document.createElement('img');
+        img.src = getThumbnailUrl(file);
+        img.alt = file.original_name || '';
+        img.loading = 'lazy';
+        img.onerror = () => { img.src = 'data:image/svg+xml,...'; };
+        card.appendChild(img);
+        // Nút folder link
+        const folderBtn = document.createElement('button');
+        folderBtn.className = 'folder-link-btn';
+        folderBtn.innerHTML = '<i class="fas fa-folder-open"></i>';
+        folderBtn.title = 'Đi tới thư mục chứa media này';
+        folderBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          goToFolder(file.folder_id);
+        });
+        card.appendChild(folderBtn);
+        // Type icon
+        const typeIcon = document.createElement('div');
+        typeIcon.className = 'media-type-icon';
+        typeIcon.innerHTML = isVideo ? '<i class="fas fa-play"></i>' : '';
+        card.appendChild(typeIcon);
+        card.addEventListener('click', () => openViewer(files, index));
+        frag.appendChild(card);
+      });
+      randomGallery.appendChild(frag);
+    }
+
+    refreshRandomBtn.addEventListener('click', () => {
+      showRandomMedia();
+    });
 
     async function loadFolders() {
       const snap = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
@@ -799,7 +910,6 @@
       });
       folderSelectMobile.innerHTML = selectHTML;
 
-      // Populate default folder dropdown và moveFolderSelect
       defaultFolderSelect.innerHTML = '<option value="">-- Chọn thư mục mặc định --</option>';
       foldersCache.forEach(f => {
         defaultFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
@@ -811,7 +921,6 @@
         moveToFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
       });
 
-      // Gán sự kiện folder items, tabs, mobile select
       document.querySelectorAll('#folderList .folder-item').forEach(el => {
         el.addEventListener('click', (e) => {
           if (e.target.closest('.folder-actions')) return;
@@ -849,7 +958,6 @@
         applyFilter();
       });
 
-      // Rename / Delete folder buttons
       document.querySelectorAll('.rename-folder-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
@@ -1041,7 +1149,7 @@
       }
     });
 
-    // ===== UPLOAD MULTI-FILE, MULTI-FOLDER =====
+    // Upload
     function buildFolderOptions(selectedId = '') {
       let opts = '<option value="">-- Chọn thư mục --</option>';
       foldersCache.forEach(f => {
@@ -1074,7 +1182,6 @@
         fileListContainer.appendChild(div);
       });
 
-      // Gán sự kiện thay đổi folder cho từng select
       document.querySelectorAll('.file-folder-select').forEach(select => {
         select.addEventListener('change', (e) => {
           const idx = parseInt(select.dataset.index);
@@ -1083,7 +1190,6 @@
       });
     }
 
-    // Khi chọn file
     fileInput.addEventListener('change', () => {
       const newFiles = Array.from(fileInput.files);
       const defaultFolder = defaultFolderSelect.value;
@@ -1091,16 +1197,13 @@
         filesToUpload.push({ file, folderId: defaultFolder || null });
       });
       renderFileList();
-      fileInput.value = ''; // reset để có thể chọn lại cùng file
+      fileInput.value = '';
     });
 
-    // Khi thay đổi thư mục mặc định, cập nhật lại các file chưa được gán folder riêng? Không, giữ nguyên.
     defaultFolderSelect.addEventListener('change', () => {
-      // Có thể cập nhật tất cả file đang có về folder mặc định mới? Thường thì không nên.
-      // Chỉ áp dụng cho file mới thêm vào sau.
+      // Không tự động thay đổi folder của file đã chọn
     });
 
-    // Kéo thả
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor='var(--accent)'; });
     uploadZone.addEventListener('dragleave', () => uploadZone.style.borderColor='');
@@ -1117,7 +1220,6 @@
       }
     });
 
-    // Upload all
     uploadAllBtn.addEventListener('click', async () => {
       if (!currentUser) return;
       if (filesToUpload.length === 0) {
@@ -1137,7 +1239,6 @@
         const progressPercent = Math.round((i / total) * 100);
         uploadProgress.style.width = progressPercent + '%';
 
-        // Kiểm tra trùng
         const isDuplicate = allMediaCache.some(m => m.original_name === file.name && m.size === file.size);
         if (isDuplicate) {
           skipCount++;
@@ -1177,6 +1278,7 @@
       renderFileList();
       await loadAllMedia();
       applyFilter();
+      showRandomMedia();
       loadFolders();
     });
 
@@ -1205,7 +1307,7 @@
       });
     }
 
-    // ===== RENDER MEDIA =====
+    // Render media
     function renderMedia(files) {
       mediaGallery.innerHTML = '';
       if(!files.length) {
@@ -1267,7 +1369,7 @@
       updateSelectionUI();
     }
 
-    // ===== VIEWER =====
+    // Viewer
     let viewerFiles = [], viewerIndex = 0;
     let touchStartX = 0, touchDist = 0, isDraggingViewer = false;
     let hideControlsTimer;
