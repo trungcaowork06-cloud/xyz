@@ -251,10 +251,14 @@
     .auth-toggle span { color: var(--accent); cursor: pointer; font-weight: 500; }
     .auth-toggle span:hover { text-decoration: underline; }
 
-    .duplicate-list { text-align: left; margin: 1rem 0; }
-    .duplicate-item { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 0.5rem; margin-bottom: 0.3rem; }
-    .duplicate-item .file-info { flex:1; margin-right: 1rem; }
-    .duplicate-item .actions { display: flex; gap: 0.3rem; }
+    .upload-placeholder {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-secondary);
+      border: 2px dashed rgba(255,255,255,0.1);
+      border-radius: 1rem;
+      margin: 1rem 0;
+    }
   </style>
   <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 </head>
@@ -362,21 +366,31 @@
 
       <div id="page-upload" class="page">
         <h2><i class="fas fa-cloud-upload-alt"></i> Tải lên</h2>
-        <div class="upload-zone" id="uploadZone">
-          <i class="fas fa-cloud-upload-alt fa-2x"></i>
-          <div>Nhấn để mở cửa sổ Cloudinary</div>
-          <div style="font-size:0.8rem; margin-top:0.5rem; color:var(--text-secondary);">
-            Hỗ trợ upload ảnh & video, không giới hạn kích thước.
-          </div>
-        </div>
-        <input type="file" id="fileInput" style="display:none;">
         <div style="margin:1rem 0;">
-          <label>📁 Chọn thư mục:</label>
-          <select id="uploadFolderSelect" style="width:100%; padding:0.7rem; background:var(--bg-card); border:1px solid var(--border); border-radius:0.8rem; color:white;">
-            <option value="">-- Thư mục gốc --</option>
+          <label style="font-weight:600; display:block; margin-bottom:0.5rem;">📁 Chọn thư mục đích <span style="color:var(--danger);">*</span></label>
+          <select id="uploadFolderSelect" style="width:100%; padding:0.8rem; background:var(--bg-card); border:1px solid var(--border); border-radius:0.8rem; color:white; font-size:1rem;">
+            <option value="">-- Vui lòng chọn thư mục --</option>
           </select>
         </div>
-        <div id="uploadStatus" style="margin-top:0.5rem;"></div>
+
+        <!-- Khu vực upload chỉ hiển thị khi đã chọn thư mục -->
+        <div id="uploadArea" class="hidden">
+          <div class="upload-zone" id="uploadZone">
+            <i class="fas fa-cloud-upload-alt fa-2x"></i>
+            <div>Nhấn để mở cửa sổ Cloudinary</div>
+            <div style="font-size:0.8rem; margin-top:0.5rem; color:var(--text-secondary);">
+              Hỗ trợ upload ảnh & video, không giới hạn kích thước.
+            </div>
+          </div>
+          <input type="file" id="fileInput" style="display:none;">
+          <div id="uploadStatus" style="margin-top:0.5rem;"></div>
+        </div>
+
+        <!-- Placeholder khi chưa chọn thư mục -->
+        <div id="uploadPlaceholder" class="upload-placeholder">
+          <i class="fas fa-folder-open fa-2x"></i>
+          <p style="margin-top:0.5rem;">Vui lòng chọn thư mục trước khi tải lên</p>
+        </div>
       </div>
     </main>
   </div>
@@ -478,18 +492,14 @@
           duplicateList.appendChild(groupDiv);
         });
 
-        // Gán sự kiện cho các nút "Giữ 1"
         document.querySelectorAll('.keep-first-btn').forEach(btn => {
           btn.addEventListener('click', async (e) => {
             const groupIdx = parseInt(btn.dataset.group);
             const group = duplicateGroups[groupIdx];
-            // Giữ lại phần tử đầu tiên, xóa các phần còn lại
             const toDelete = group.slice(1);
             await deleteMediaItems(toDelete);
-            // Reload media và kiểm tra lại
             await loadAllMedia();
             applyFilter();
-            // Đóng modal và hiển thị lại nếu còn trùng
             const newGroups = findDuplicates(allMediaCache);
             if (newGroups.length > 0) {
               showDuplicateModal(newGroups);
@@ -510,7 +520,6 @@
       const batch = db.batch();
       for (const item of items) {
         batch.delete(db.collection('users').doc(currentUser).collection('media').doc(item.id));
-        // Xóa trên Cloudinary
         if (item.public_id) {
           try {
             await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/delete_by_token`, {
@@ -522,7 +531,6 @@
         }
       }
       await batch.commit();
-      // Xóa khỏi cache
       const idsToDelete = new Set(items.map(i => i.id));
       allMediaCache = allMediaCache.filter(m => !idsToDelete.has(m.id));
       selectedMediaIds.clear();
@@ -543,7 +551,6 @@
       return groups;
     }
 
-    // Nút kiểm tra trùng lặp (thêm vào selection bar)
     const checkDuplicateBtn = document.createElement('button');
     checkDuplicateBtn.className = 'btn outline';
     checkDuplicateBtn.innerHTML = '<i class="fas fa-search"></i> Kiểm tra trùng';
@@ -551,15 +558,14 @@
       const groups = findDuplicates(allMediaCache);
       showDuplicateModal(groups);
     });
-    // Thêm vào actions trong selection bar (sẽ được thêm sau khi render)
-    // Thực tế chúng ta sẽ thêm nút này vào giao diện ngay trong HTML hoặc bằng JS
-    // Tạm thời thêm vào selection bar bằng cách appendChild sau khi DOM load
-    document.addEventListener('DOMContentLoaded', () => {
+
+    setTimeout(() => {
       const actionsDiv = document.querySelector('#selectionBar .actions');
-      if (actionsDiv) {
+      if (actionsDiv && !document.getElementById('checkDuplicateBtn')) {
+        checkDuplicateBtn.id = 'checkDuplicateBtn';
         actionsDiv.appendChild(checkDuplicateBtn);
       }
-    });
+    }, 500);
 
     // Auth
     const authPage = $('#authPage'), appMain = $('#appMain');
@@ -583,6 +589,9 @@
     const moveSelectedBtn = $('#moveSelectedBtn'), deleteSelectedBtn = $('#deleteSelectedBtn'), cancelSelectionBtn = $('#cancelSelectionBtn');
     const selectAllBtn = $('#selectAllBtn');
     const selectionRect = $('#selectionRect');
+    const uploadArea = $('#uploadArea');
+    const uploadPlaceholder = $('#uploadPlaceholder');
+    const uploadZone = $('#uploadZone');
 
     // Rubber band
     let isDragging = false, dragStartX, dragStartY;
@@ -759,10 +768,13 @@
       });
       folderSelectMobile.innerHTML = selectHTML;
 
-      uploadFolderSelect.innerHTML = '<option value="">-- Thư mục gốc --</option>';
+      // Cập nhật dropdown upload: giữ nguyên nhưng không có "__unfiled__" vì upload vào "Chưa phân loại" là không có folder
+      uploadFolderSelect.innerHTML = '<option value="">-- Vui lòng chọn thư mục --</option>';
       foldersCache.forEach(f => {
         uploadFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
       });
+      // Thêm option "Chưa phân loại" (tương đương upload không folder)
+      uploadFolderSelect.innerHTML += '<option value="__unfiled__">📂 Chưa phân loại (không thư mục)</option>';
 
       moveToFolderSelect.innerHTML = '<option value="">-- Chọn thư mục --</option>';
       foldersCache.forEach(f => {
@@ -929,7 +941,6 @@
       updateSelectionUI();
     }
 
-    // Nút chọn tất cả (sửa logic để chọn đúng các media đang hiển thị)
     selectAllBtn.addEventListener('click', () => {
       const cards = document.querySelectorAll('.media-card');
       const visibleIds = Array.from(cards).map(c => c.dataset.mediaId).filter(Boolean);
@@ -998,13 +1009,38 @@
       }
     });
 
+    // ===== LOGIC HIỂN THỊ KHU VỰC UPLOAD DỰA TRÊN THƯ MỤC ĐÃ CHỌN =====
+    function toggleUploadArea() {
+      const selectedFolder = uploadFolderSelect.value;
+      if (selectedFolder === '') {
+        // Chưa chọn thư mục
+        uploadArea.classList.add('hidden');
+        uploadPlaceholder.classList.remove('hidden');
+      } else {
+        // Đã chọn thư mục (bao gồm cả "__unfiled__")
+        uploadArea.classList.remove('hidden');
+        uploadPlaceholder.classList.add('hidden');
+      }
+    }
+
+    uploadFolderSelect.addEventListener('change', toggleUploadArea);
+
+    // Gọi lần đầu để đồng bộ trạng thái
+    toggleUploadArea();
+
     // ===== CLOUDINARY UPLOAD WIDGET =====
-    const uploadZone = $('#uploadZone');
     uploadZone.addEventListener('click', () => {
+      const selectedFolder = uploadFolderSelect.value;
+      if (selectedFolder === '') {
+        uploadStatus.innerHTML = '❌ Vui lòng chọn thư mục trước khi tải lên.';
+        return;
+      }
+
       if (typeof cloudinary === 'undefined') {
         uploadStatus.innerHTML = '❌ Cloudinary widget không tải được. Hãy tắt chặn quảng cáo và thử lại.';
         return;
       }
+
       cloudinary.openUploadWidget(
         {
           cloudName: CLOUD_NAME,
@@ -1039,7 +1075,7 @@
           }
           if (result && result.event === 'success') {
             uploadStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
-            const folderId = uploadFolderSelect.value || null;
+            const folderId = selectedFolder === '__unfiled__' ? null : selectedFolder;
             const file = result.info;
             const isDuplicate = allMediaCache.some(m => m.original_name === file.original_filename && m.size === file.bytes);
             if (isDuplicate) {
@@ -1064,7 +1100,6 @@
               uploadStatus.innerHTML = `<i class="fas fa-times-circle"></i> Lỗi lưu: ${e.message}`;
             }
           }
-          // Xử lý các file lỗi (nếu có)
           if (result && result.event === 'error') {
             uploadStatus.innerHTML = `<i class="fas fa-times-circle"></i> Lỗi upload: ${result.info?.message || 'không xác định'}`;
           }
@@ -1215,15 +1250,6 @@
         if(e.key === 'Escape') closeViewer();
       }
     });
-
-    // Thêm nút kiểm tra trùng vào selection bar sau khi đã có DOM
-    setTimeout(() => {
-      const actionsDiv = document.querySelector('#selectionBar .actions');
-      if (actionsDiv && !document.getElementById('checkDuplicateBtn')) {
-        checkDuplicateBtn.id = 'checkDuplicateBtn';
-        actionsDiv.appendChild(checkDuplicateBtn);
-      }
-    }, 500);
 
     checkSession();
   })();
