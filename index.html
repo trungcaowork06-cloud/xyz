@@ -205,6 +205,7 @@
     .bottom-nav .nav-item { flex-direction: column; font-size: 0.7rem; color: var(--text-secondary); background: transparent; box-shadow: none; display: flex; align-items: center; gap: 0.2rem; }
     .bottom-nav .nav-item.active { color: var(--accent); }
 
+    /* Viewer cải tiến */
     .viewer-overlay {
       position: fixed; top:0; left:0; width:100%; height:100%;
       background: rgba(0,0,0,0.96); z-index: 100;
@@ -212,13 +213,37 @@
       opacity: 0; pointer-events: none; transition: opacity 0.25s;
     }
     .viewer-overlay.active { opacity: 1; pointer-events: auto; }
-    .viewer-content { width:100%; height:100%; display: flex; align-items: center; justify-content: center; position: relative; }
-    .viewer-media { max-width:95%; max-height:90%; object-fit: contain; border-radius:0.5rem; user-select:none; -webkit-user-select:none; transition: transform 0.2s ease-out; }
-    .viewer-close { position: absolute; top:20px; right:20px; background: rgba(0,0,0,0.6); color: white; border: none; font-size:2rem; width:46px; height:46px; border-radius:50%; cursor: pointer; z-index:5; display: flex; align-items: center; justify-content: center; }
-    .viewer-nav { position: absolute; top:50%; transform: translateY(-50%); background: rgba(255,255,255,0.25); color: white; border: none; font-size:2rem; padding:0.4rem 0.8rem; cursor: pointer; border-radius:0.5rem; z-index:5; transition: opacity 0.3s; opacity: 0; }
-    .viewer-overlay.interacting .viewer-nav { opacity: 1; }
-    .viewer-prev { left:10px; } .viewer-next { right:10px; }
-    .viewer-counter { position: absolute; bottom:20px; left:50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: white; padding:0.3rem 0.8rem; border-radius:1rem; font-size:0.9rem; }
+    .viewer-content {
+      width:100%; height:100%; display: flex; align-items: center; justify-content: center;
+      position: relative;
+      /* Cho phép click xuyên qua vùng trống để đóng */
+    }
+    .viewer-media { max-width:95%; max-height:90%; object-fit: contain; border-radius:0.5rem; user-select:none; -webkit-user-select:none; }
+    .viewer-close {
+      position: absolute; top:20px; right:20px;
+      background: rgba(0,0,0,0.6); color: white;
+      border: none; font-size:2rem; width:46px; height:46px;
+      border-radius:50%; cursor: pointer; z-index:5;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .viewer-nav {
+      position: absolute; top:50%; transform: translateY(-50%);
+      background: rgba(255,255,255,0.15); color: white;
+      border: none; font-size:1.5rem; width:40px; height:40px;
+      cursor: pointer; border-radius:50%; z-index:5;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s, opacity 0.2s;
+      opacity: 0.7;
+    }
+    .viewer-nav:hover { background: rgba(255,255,255,0.3); opacity: 1; }
+    .viewer-prev { left:10px; }
+    .viewer-next { right:10px; }
+    .viewer-counter {
+      position: absolute; bottom:20px; left:50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.6); color: white;
+      padding:0.3rem 0.8rem; border-radius:1rem; font-size:0.9rem;
+    }
     .hidden { display: none !important; }
     .error-msg { color: var(--danger); font-size: 0.85rem; min-height: 1.2rem; }
 
@@ -805,13 +830,11 @@
       const videos = allMediaCache.filter(m => m.resource_type === 'video');
       const images = allMediaCache.filter(m => m.resource_type === 'image');
       let pool = [...videos];
-      // Nếu thiếu video, bổ sung ảnh
       if (pool.length < 10) {
         const shuffledImages = [...images].sort(() => Math.random() - 0.5);
         const needed = 10 - pool.length;
         pool = pool.concat(shuffledImages.slice(0, needed));
       }
-      // Xáo trộn và lấy đúng 10 (hoặc ít hơn nếu tổng pool < 10)
       const shuffled = [...pool].sort(() => Math.random() - 0.5);
       const selected = shuffled.slice(0, Math.min(10, shuffled.length));
       renderRandomMedia(selected);
@@ -819,16 +842,13 @@
 
     function goToFolder(folderId) {
       currentFolderId = folderId || '__unfiled__';
-      // Cập nhật tiêu đề và active folder
       const folder = folderId ? foldersCache.find(f => f.id === folderId) : null;
       libraryTitle.innerHTML = folder
         ? `<i class="fas fa-folder-open"></i> ${folder.name}`
         : (folderId === '__unfiled__' ? '<i class="fas fa-box-open"></i> Chưa phân loại' : '<i class="fas fa-photo-video"></i> Tất cả');
-      // Active folder item
       document.querySelectorAll('#folderList .folder-item').forEach(el => el.classList.remove('active'));
       const activeItem = document.querySelector(`#folderList .folder-item[data-folder="${currentFolderId}"]`);
       if (activeItem) activeItem.classList.add('active');
-      // Chuyển tab thư viện
       switchPage('library');
       applyFilter();
     }
@@ -846,7 +866,6 @@
         img.loading = 'lazy';
         img.onerror = () => { img.src = 'data:image/svg+xml,...'; };
         card.appendChild(img);
-        // Nút folder link
         const folderBtn = document.createElement('button');
         folderBtn.className = 'folder-link-btn';
         folderBtn.innerHTML = '<i class="fas fa-folder-open"></i>';
@@ -856,7 +875,6 @@
           goToFolder(file.folder_id);
         });
         card.appendChild(folderBtn);
-        // Type icon
         const typeIcon = document.createElement('div');
         typeIcon.className = 'media-type-icon';
         typeIcon.innerHTML = isVideo ? '<i class="fas fa-play"></i>' : '';
@@ -1200,9 +1218,7 @@
       fileInput.value = '';
     });
 
-    defaultFolderSelect.addEventListener('change', () => {
-      // Không tự động thay đổi folder của file đã chọn
-    });
+    defaultFolderSelect.addEventListener('change', () => {});
 
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor='var(--accent)'; });
@@ -1369,33 +1385,29 @@
       updateSelectionUI();
     }
 
-    // Viewer
+    // Viewer – ĐÃ LOẠI BỎ VUỐT, CHỈ DÙNG NÚT, THÊM ĐÓNG KHI CLICK KHOẢNG TRỐNG
     let viewerFiles = [], viewerIndex = 0;
-    let touchStartX = 0, touchDist = 0, isDraggingViewer = false;
-    let hideControlsTimer;
 
     function openViewer(files, index) {
       viewerFiles = files;
       viewerIndex = index;
       viewerOverlay.classList.add('active');
-      viewerOverlay.classList.add('interacting');
-      clearTimeout(hideControlsTimer);
-      hideControlsTimer = setTimeout(() => viewerOverlay.classList.remove('interacting'), 3000);
       updateViewer();
     }
 
     function closeViewer() {
       viewerOverlay.classList.remove('active');
       viewerContent.innerHTML = '';
-      clearTimeout(hideControlsTimer);
     }
 
     viewerCloseBtn.addEventListener('click', closeViewer);
-    viewerOverlay.addEventListener('click', (e) => { if (e.target === viewerOverlay) closeViewer(); });
-    viewerContent.addEventListener('click', () => {
-      viewerOverlay.classList.add('interacting');
-      clearTimeout(hideControlsTimer);
-      hideControlsTimer = setTimeout(() => viewerOverlay.classList.remove('interacting'), 3000);
+    // Click vào overlay (vùng tối bên ngoài) để đóng
+    viewerOverlay.addEventListener('click', (e) => {
+      if (e.target === viewerOverlay) closeViewer();
+    });
+    // Click vào vùng trống trong viewerContent (không phải media) để đóng
+    viewerContent.addEventListener('click', (e) => {
+      if (e.target === viewerContent) closeViewer();
     });
 
     function updateViewer() {
@@ -1417,32 +1429,14 @@
       media.setAttribute('draggable', 'false');
       viewerContent.appendChild(media);
       viewerCounter.textContent = `${viewerIndex+1}/${viewerFiles.length}`;
-
-      media.addEventListener('touchstart', e => {
-        touchStartX = e.touches[0].clientX;
-        media.style.transition = 'none';
-        isDraggingViewer = true;
-      });
-      media.addEventListener('touchmove', e => {
-        if (!isDraggingViewer) return;
-        touchDist = e.touches[0].clientX - touchStartX;
-        media.style.transform = `translateX(${touchDist}px)`;
-      });
-      media.addEventListener('touchend', () => {
-        if (!isDraggingViewer) return;
-        isDraggingViewer = false;
-        media.style.transition = 'transform 0.2s ease-out';
-        if (Math.abs(touchDist) > 60) {
-          if (touchDist < 0 && viewerIndex < viewerFiles.length-1) viewerIndex++;
-          else if (touchDist > 0 && viewerIndex > 0) viewerIndex--;
-        }
-        media.style.transform = 'translateX(0)';
-        updateViewer();
-      });
     }
 
-    viewerPrev.addEventListener('click', () => { if(viewerIndex>0) { viewerIndex--; updateViewer(); } });
-    viewerNext.addEventListener('click', () => { if(viewerIndex<viewerFiles.length-1) { viewerIndex++; updateViewer(); } });
+    viewerPrev.addEventListener('click', () => {
+      if (viewerIndex > 0) { viewerIndex--; updateViewer(); }
+    });
+    viewerNext.addEventListener('click', () => {
+      if (viewerIndex < viewerFiles.length-1) { viewerIndex++; updateViewer(); }
+    });
     document.addEventListener('keydown', e => {
       if(viewerOverlay.classList.contains('active')) {
         if(e.key === 'ArrowLeft') viewerPrev.click();
