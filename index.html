@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>📁 Kho lưu trữ</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+    body { background:#0f172a; color:#e2e8f0; display:flex; flex-direction:column; height:100vh; }
+    .app { display:flex; flex:1; overflow:hidden; }
+    .sidebar {
+      width:260px; background:rgba(15,23,42,0.95); border-right:1px solid rgba(255,255,255,0.1);
+      display:flex; flex-direction:column; padding:1.5rem 1rem; overflow-y:auto;
+    }
+    .sidebar h2 { font-size:1.3rem; margin-bottom:1.5rem; }
+    .menu-item {
+      display:flex; align-items:center; gap:0.5rem; padding:0.7rem 1rem; border-radius:0.8rem;
+      cursor:pointer; color:#cbd5e1; margin-bottom:0.3rem;
+    }
+    .menu-item:hover, .menu-item.active { background:#2563eb; color:white; }
+    .folders-section { margin-top:1rem; border-top:1px solid rgba(255,255,255,0.1); padding-top:1rem; }
+    .folder-item {
+      display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.8rem; border-radius:0.6rem;
+      cursor:pointer; color:#cbd5e1; font-size:0.9rem;
+    }
+    .folder-item.active { background:rgba(37,99,235,0.3); color:white; }
+    .add-folder { display:flex; gap:0.3rem; margin-top:0.5rem; }
+    .add-folder input {
+      flex:1; padding:0.4rem; border-radius:0.5rem; border:1px solid rgba(255,255,255,0.2);
+      background:rgba(255,255,255,0.1); color:white; outline:none;
+    }
+    .add-folder button { padding:0.4rem 0.7rem; border-radius:0.5rem; background:#2563eb; color:white; border:none; }
+    .user-info { margin-top:auto; padding:1rem 0; border-top:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:0.5rem; }
+    .logout-btn { color:#f87171; cursor:pointer; margin-top:0.3rem; }
+    .main-content { flex:1; padding:2rem; overflow-y:auto; background:#1e293b; }
+    .page { display:none; }
+    .page.active { display:block; }
+    .file-label {
+      display:block; padding:1.5rem; border:2px dashed rgba(255,255,255,0.25); border-radius:1rem;
+      text-align:center; cursor:pointer; margin:1rem 0; background:rgba(255,255,255,0.02);
+    }
+    .gallery {
+      display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:1rem;
+    }
+    .media-card {
+      background:rgba(0,0,0,0.3); border-radius:1rem; overflow:hidden; border:1px solid rgba(255,255,255,0.1);
+    }
+    .media-card img, .media-card video { width:100%; height:160px; object-fit:cover; }
+    .media-info { padding:0.5rem; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center; }
+    .delete-btn { background:#ef4444; border:none; color:white; padding:0.2rem 0.5rem; border-radius:0.3rem; font-size:0.7rem; cursor:pointer; width:auto; }
+    .folder-tabs { display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; }
+    .folder-tab {
+      padding:0.4rem 0.9rem; border-radius:2rem; background:rgba(255,255,255,0.1); cursor:pointer; font-size:0.9rem;
+    }
+    .folder-tab.active { background:#2563eb; color:white; }
+    @media (max-width: 768px) {
+      .app { flex-direction:column; }
+      .sidebar { display:none; }
+      .main-content { padding:1rem; padding-bottom:4rem; }
+      .gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+      .folder-tabs { overflow-x:auto; white-space:nowrap; }
+    }
+    .hidden { display:none!important; }
+    .auth-fullpage {
+      display:flex; align-items:center; justify-content:center; width:100vw; height:100vh;
+      background:linear-gradient(145deg,#0f172a,#1e293b);
+    }
+    .auth-box { background:rgba(255,255,255,0.05); padding:2rem; border-radius:2rem; max-width:400px; width:90%; }
+    .auth-box input { width:100%; margin-bottom:1rem; padding:0.8rem; border-radius:1rem; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2); }
+    .auth-box button { width:100%; padding:0.8rem; border-radius:1rem; background:#2563eb; color:white; border:none; margin-bottom:0.5rem; cursor:pointer; }
+  </style>
+</head>
+<body>
+<!-- Auth Page -->
+<div id="authPage" class="auth-fullpage hidden">
+  <div class="auth-box">
+    <h2>🔐 Đăng nhập</h2>
+    <input type="text" id="username" placeholder="Email">
+    <input type="password" id="password" placeholder="Mật khẩu">
+    <button id="loginBtn">🚪 Đăng nhập</button>
+    <button id="registerBtn" style="background:rgba(255,255,255,0.1);">✨ Tạo tài khoản</button>
+    <div id="authMessage" style="color:#f87171; margin-top:0.5rem;"></div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="appMain" class="hidden" style="display:flex; flex-direction:column; height:100vh;">
+  <div class="app">
+    <aside class="sidebar">
+      <h2>📁 Vault</h2>
+      <div class="menu-item active" data-page="library">🖼️ Thư viện</div>
+      <div class="menu-item" data-page="upload">⬆️ Tải lên</div>
+      <div class="folders-section">
+        <div style="font-weight:600; margin-bottom:0.5rem;">📂 Thư mục</div>
+        <div class="folder-list" id="folderList"></div>
+        <div class="add-folder">
+          <input type="text" id="newFolderName" placeholder="Tên mới...">
+          <button id="createFolderBtn">+</button>
+        </div>
+      </div>
+      <div class="user-info"><span>👤</span> <span id="displayUser"></span></div>
+      <div class="logout-btn" id="logoutBtn">🚪 Đăng xuất</div>
+    </aside>
+    <main class="main-content">
+      <div id="page-library" class="page active">
+        <h2 id="libraryTitle">📚 Tất cả</h2>
+        <div class="folder-tabs" id="folderTabs"></div>
+        <div class="gallery" id="mediaGallery"></div>
+      </div>
+      <div id="page-upload" class="page">
+        <h2>📤 Tải lên</h2>
+        <label for="fileInput" class="file-label">📎 Chọn ảnh / video</label>
+        <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
+        <div id="fileName">Chưa chọn tệp</div>
+        <select id="uploadFolderSelect" style="margin:1rem 0; padding:0.5rem; border-radius:0.5rem; background:rgba(255,255,255,0.1); color:white; width:100%;">
+          <option value="">-- Thư mục gốc --</option>
+        </select>
+        <button id="uploadBtn" style="padding:0.7rem 2rem; background:#2563eb; border:none; border-radius:0.5rem; color:white;">Tải lên</button>
+        <div id="uploadStatus" style="margin-top:0.5rem;"></div>
+      </div>
+    </main>
+  </div>
+  <!-- Bottom navigation mobile -->
+  <nav class="bottom-nav" style="display:none; background:#1e293b; border-top:1px solid rgba(255,255,255,0.1); padding:0.5rem; justify-content:space-around; position:fixed; bottom:0; left:0; right:0; z-index:10;">
+    <div class="nav-item active" data-page="library">🖼️<span>Thư viện</span></div>
+    <div class="nav-item" data-page="upload">⬆️<span>Tải lên</span></div>
+    <div class="nav-item" id="mobileLogout">🚪<span>Thoát</span></div>
+  </nav>
+</div>
+
+<!-- Firebase & Cloudinary SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
+
+<script>
+  // ===== CẤU HÌNH CỦA BẠN =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyBG7rSMk9FqD9GgNYwApXlsPBnxeyZi8qU",
+    authDomain: "xyzweb-906a1.firebaseapp.com",
+    projectId: "xyzweb-906a1",
+    storageBucket: "xyzweb-906a1.firebasestorage.app",
+    messagingSenderId: "268520089231",
+    appId: "1:268520089231:web:f9fcf91be875cda72272fa"
+  };
+
+  // 🔁 THAY THẾ BẰNG THÔNG TIN CLOUDINARY CỦA BẠN
+  const CLOUDINARY_CLOUD_NAME = "YOUR_CLOUD_NAME";        // 👈 Thay ở đây
+  const CLOUDINARY_UPLOAD_PRESET = "YOUR_UPLOAD_PRESET";  // 👈 Thay ở đây
+
+  // Khởi tạo Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let currentUser = null;
+  let currentFolderId = null;
+  let foldersCache = [];
+
+  const authPage = document.getElementById('authPage');
+  const appMain = document.getElementById('appMain');
+  const loginBtn = document.getElementById('loginBtn');
+  const registerBtn = document.getElementById('registerBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const mobileLogout = document.getElementById('mobileLogout');
+  const displayUser = document.getElementById('displayUser');
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      displayUser.textContent = user.email;
+      authPage.classList.add('hidden');
+      appMain.classList.remove('hidden');
+      loadFolders();
+      loadMedia();
+    } else {
+      currentUser = null;
+      authPage.classList.remove('hidden');
+      appMain.classList.add('hidden');
+    }
+  });
+
+  loginBtn.onclick = async () => {
+    const email = document.getElementById('username').value;
+    const pass = document.getElementById('password').value;
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+    } catch (e) {
+      document.getElementById('authMessage').textContent = e.message;
+    }
+  };
+
+  registerBtn.onclick = async () => {
+    const email = document.getElementById('username').value;
+    const pass = document.getElementById('password').value;
+    if (pass.length < 6) {
+      document.getElementById('authMessage').textContent = 'Mật khẩu tối thiểu 6 ký tự';
+      return;
+    }
+    try {
+      await auth.createUserWithEmailAndPassword(email, pass);
+    } catch (e) {
+      document.getElementById('authMessage').textContent = e.message;
+    }
+  };
+
+  logoutBtn.onclick = () => auth.signOut();
+  mobileLogout.onclick = () => auth.signOut();
+
+  function switchPage(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-'+page).classList.add('active');
+    document.querySelectorAll('.menu-item, .bottom-nav .nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelector(`.menu-item[data-page="${page}"]`)?.classList.add('active');
+    document.querySelector(`.bottom-nav .nav-item[data-page="${page}"]`)?.classList.add('active');
+  }
+  document.querySelectorAll('.menu-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
+  document.querySelectorAll('.bottom-nav .nav-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
+
+  async function loadFolders() {
+    const snapshot = await db.collection('users').doc(currentUser.uid).collection('folders').orderBy('name').get();
+    foldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderFolders();
+  }
+
+  function renderFolders() {
+    const folderList = document.getElementById('folderList');
+    const folderTabs = document.getElementById('folderTabs');
+    const uploadSelect = document.getElementById('uploadFolderSelect');
+    folderList.innerHTML = '';
+    folderTabs.innerHTML = '<span class="folder-tab active" data-folder="">Tất cả</span>';
+    uploadSelect.innerHTML = '<option value="">-- Thư mục gốc --</option>';
+    foldersCache.forEach(f => {
+      folderList.innerHTML += `<div class="folder-item" data-folder="${f.id}">📁 ${f.name}</div>`;
+      folderTabs.innerHTML += `<span class="folder-tab" data-folder="${f.id}">${f.name}</span>`;
+      uploadSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
+    });
+    document.querySelectorAll('.folder-item').forEach(el => el.onclick = () => {
+      currentFolderId = el.dataset.folder;
+      document.getElementById('libraryTitle').textContent = '📁 ' + el.textContent.trim();
+      switchPage('library');
+      loadMedia();
+    });
+    document.querySelectorAll('.folder-tab').forEach(tab => {
+      tab.onclick = () => {
+        currentFolderId = tab.dataset.folder === '' ? null : tab.dataset.folder;
+        document.getElementById('libraryTitle').textContent = tab.dataset.folder === '' ? '📚 Tất cả' : '📁 ' + tab.textContent;
+        document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        loadMedia();
+      };
+    });
+  }
+
+  document.getElementById('createFolderBtn').onclick = async () => {
+    const name = document.getElementById('newFolderName').value.trim();
+    if (!name) return;
+    await db.collection('users').doc(currentUser.uid).collection('folders').add({ name });
+    document.getElementById('newFolderName').value = '';
+    loadFolders();
+  };
+
+  const fileInput = document.getElementById('fileInput');
+  const fileName = document.getElementById('fileName');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const uploadFolderSelect = document.getElementById('uploadFolderSelect');
+
+  fileInput.onchange = () => {
+    fileName.textContent = fileInput.files[0] ? `📎 ${fileInput.files[0].name}` : 'Chưa chọn';
+  };
+
+  uploadBtn.onclick = async () => {
+    const file = fileInput.files[0];
+    if (!file) { uploadStatus.textContent = 'Chọn tệp'; return; }
+    uploadStatus.textContent = '⏳ Đang tải lên Cloudinary...';
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      const cloudData = await res.json();
+      if (cloudData.error) throw new Error(cloudData.error.message);
+      const folderId = uploadFolderSelect.value || null;
+      const mediaDoc = {
+        url: cloudData.secure_url,
+        public_id: cloudData.public_id,
+        resource_type: cloudData.resource_type,
+        original_name: file.name,
+        size: cloudData.bytes,
+        folder_id: folderId,
+        created_at: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      await db.collection('users').doc(currentUser.uid).collection('media').add(mediaDoc);
+      uploadStatus.textContent = '✅ Upload thành công!';
+      fileInput.value = '';
+      fileName.textContent = 'Chưa chọn';
+      switchPage('library');
+      loadMedia();
+      loadFolders();
+    } catch (e) {
+      uploadStatus.textContent = '❌ ' + e.message;
+    }
+  };
+
+  async function loadMedia() {
+    let query = db.collection('users').doc(currentUser.uid).collection('media').orderBy('created_at', 'desc');
+    if (currentFolderId) {
+      query = query.where('folder_id', '==', currentFolderId);
+    }
+    const snapshot = await query.get();
+    const files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderMedia(files);
+  }
+
+  function renderMedia(files) {
+    const gallery = document.getElementById('mediaGallery');
+    gallery.innerHTML = '';
+    if (!files.length) {
+      gallery.innerHTML = '<p>Chưa có tệp.</p>';
+      return;
+    }
+    files.forEach(file => {
+      const card = document.createElement('div');
+      card.className = 'media-card';
+      let el;
+      if (file.resource_type === 'video') {
+        el = document.createElement('video');
+        el.src = file.url;
+        el.controls = true;
+      } else {
+        el = document.createElement('img');
+        el.src = file.url;
+        el.alt = file.original_name;
+      }
+      card.appendChild(el);
+      const info = document.createElement('div');
+      info.className = 'media-info';
+      info.innerHTML = `<span>${file.original_name}</span>`;
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.textContent = 'Xóa';
+      delBtn.onclick = async (e) => {
+        e.stopPropagation();
+        if (confirm('Xóa?')) {
+          await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/delete_by_token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: file.public_id })
+          });
+          await db.collection('users').doc(currentUser.uid).collection('media').doc(file.id).delete();
+          loadMedia();
+        }
+      };
+      info.appendChild(delBtn);
+      card.appendChild(info);
+      gallery.appendChild(card);
+    });
+  }
+</script>
+</body>
+</html>
