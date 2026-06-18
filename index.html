@@ -216,7 +216,6 @@
     .viewer-content {
       width:100%; height:100%; display: flex; align-items: center; justify-content: center;
       position: relative;
-      /* Cho phép click xuyên qua vùng trống để đóng */
     }
     .viewer-media { max-width:95%; max-height:90%; object-fit: contain; border-radius:0.5rem; user-select:none; -webkit-user-select:none; }
     .viewer-close {
@@ -549,7 +548,7 @@
     function showDuplicateModal(groups) {
       duplicateGroups = groups;
       duplicateList.innerHTML = '';
-      if (groups.length === 0) {
+      if (!groups || groups.length === 0) {
         duplicateInfo.textContent = 'Không tìm thấy file trùng lặp.';
         deleteDuplicatesBtn.classList.add('hidden');
       } else {
@@ -593,6 +592,22 @@
 
     closeDuplicateModal.addEventListener('click', () => {
       duplicateModal.classList.remove('active');
+    });
+
+    // Xóa tất cả bản trùng (giữ 1 bản mỗi nhóm)
+    deleteDuplicatesBtn.addEventListener('click', async () => {
+      if (!duplicateGroups || duplicateGroups.length === 0) return;
+      const toDelete = [];
+      duplicateGroups.forEach(group => {
+        // Giữ phần tử đầu tiên, xóa các phần còn lại
+        toDelete.push(...group.slice(1));
+      });
+      if (toDelete.length === 0) return;
+      await deleteMediaItems(toDelete);
+      await loadAllMedia();
+      applyFilter();
+      duplicateModal.classList.remove('active');
+      alert('Đã xóa các bản trùng lặp.');
     });
 
     async function deleteMediaItems(items) {
@@ -1385,7 +1400,7 @@
       updateSelectionUI();
     }
 
-    // Viewer – ĐÃ LOẠI BỎ VUỐT, CHỈ DÙNG NÚT, THÊM ĐÓNG KHI CLICK KHOẢNG TRỐNG
+    // Viewer
     let viewerFiles = [], viewerIndex = 0;
 
     function openViewer(files, index) {
@@ -1401,11 +1416,9 @@
     }
 
     viewerCloseBtn.addEventListener('click', closeViewer);
-    // Click vào overlay (vùng tối bên ngoài) để đóng
     viewerOverlay.addEventListener('click', (e) => {
       if (e.target === viewerOverlay) closeViewer();
     });
-    // Click vào vùng trống trong viewerContent (không phải media) để đóng
     viewerContent.addEventListener('click', (e) => {
       if (e.target === viewerContent) closeViewer();
     });
