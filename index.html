@@ -32,7 +32,7 @@
       flex: 1;
       overflow: hidden;
     }
-    /* Sidebar */
+    /* Sidebar (desktop) */
     .sidebar {
       width: 280px;
       background: rgba(18,24,40,0.95);
@@ -41,9 +41,38 @@
       display: flex;
       flex-direction: column;
       padding: 1.5rem 1rem;
-      z-index: 10;
-      transition: transform 0.3s;
+      z-index: 30;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        transform: translateX(-100%);
+        box-shadow: 2px 0 20px rgba(0,0,0,0.5);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .mobile-menu-btn {
+        display: flex !important;
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 40;
+        background: var(--bg-card);
+        border-radius: 50%;
+        width: 42px;
+        height: 42px;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: white;
+        font-size: 1.4rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      }
+    }
+    .mobile-menu-btn { display: none; }
     .sidebar-header {
       font-size: 1.5rem;
       font-weight: 700;
@@ -51,7 +80,17 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      justify-content: space-between;
     }
+    .sidebar-close-mobile {
+      display: none;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) { .sidebar-close-mobile { display: block; } }
     .nav-menu { display: flex; flex-direction: column; gap: 0.3rem; }
     .nav-item {
       display: flex;
@@ -62,6 +101,7 @@
       cursor: pointer;
       color: var(--text-secondary);
       font-weight: 500;
+      transition: 0.15s;
     }
     .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
     .nav-item.active { background: var(--accent); color: white; }
@@ -81,9 +121,22 @@
       border-radius: 0.7rem;
       cursor: pointer;
       color: var(--text-secondary);
+      position: relative;
+      transition: 0.15s;
     }
     .folder-item i { color: #fbbf24; }
     .folder-item.active { background: rgba(79,140,255,0.15); color: white; }
+    .folder-item .rename-btn {
+      display: none;
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.4rem;
+    }
+    .folder-item:hover .rename-btn { display: block; }
     .add-folder { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .add-folder input {
       flex:1; padding:0.5rem; background: var(--bg-card); border:1px solid var(--border);
@@ -111,45 +164,20 @@
       background: var(--bg-secondary);
       -webkit-overflow-scrolling: touch;
     }
-    .page { display: none; animation: fade 0.25s; }
+    @media (max-width: 768px) { .main-content { padding: 1rem; padding-top: 4rem; } }
+    .page { display: none; animation: fade 0.2s; }
     .page.active { display: block; }
     @keyframes fade { from { opacity:0; transform: translateY(5px); } }
-
-    /* Auth */
-    .auth-container {
-      display: flex; align-items: center; justify-content: center;
-      height: 100vh; background: radial-gradient(circle at top, #1e293b, #0b0f19);
-    }
-    .auth-box {
-      background: rgba(30,37,56,0.9); backdrop-filter: blur(20px);
-      border:1px solid var(--border); padding:2.5rem; border-radius:2rem;
-      width:90%; max-width:400px; box-shadow: 0 15px 30px rgba(0,0,0,0.5);
-    }
-    .auth-box h2 { margin-bottom:0.5rem; }
-    .auth-box input {
-      width:100%; padding:0.9rem; background:var(--bg-card); border:1px solid var(--border);
-      border-radius:1rem; margin-bottom:1rem; color:white; outline:none;
-    }
-    .auth-box button {
-      width:100%; padding:0.9rem; background:var(--accent); border:none; border-radius:1rem;
-      color:white; font-weight:600; cursor:pointer; margin-bottom:0.5rem;
-    }
-    .auth-toggle { text-align:center; color:var(--text-secondary); }
-    .auth-toggle span { color:var(--accent); cursor:pointer; }
-    .error-msg { color:var(--danger); font-size:0.85rem; min-height:1.2rem; }
 
     /* Gallery */
     .gallery {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.8rem;
       margin-top: 1rem;
     }
     @media (max-width: 768px) {
-      .gallery {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 0.6rem;
-      }
+      .gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
     }
     .media-card {
       position: relative;
@@ -158,18 +186,16 @@
       background: var(--bg-card);
       border: 1px solid var(--border);
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: transform 0.15s;
     }
-    .media-card:active { transform: scale(0.98); }
-    .media-card img, .media-card video {
+    .media-card:active { transform: scale(0.97); }
+    .media-card img {
       width: 100%;
       height: 200px;
       object-fit: cover;
       display: block;
     }
-    @media (max-width: 768px) {
-      .media-card img, .media-card video { height: 160px; }
-    }
+    @media (max-width: 768px) { .media-card img { height: 160px; } }
     .media-card .delete-btn {
       position: absolute;
       top: 8px;
@@ -178,8 +204,8 @@
       color: white;
       border: none;
       border-radius: 50%;
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -203,7 +229,18 @@
     }
     .upload-zone:hover { border-color: var(--accent); }
 
-    /* Folder select mobile */
+    /* Folder select */
+    .folder-tabs-desktop { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .folder-tab {
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      background: rgba(255,255,255,0.05);
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .folder-tab.active { background: var(--accent); color: white; }
+    @media (max-width: 768px) { .folder-tabs-desktop { display: none; } }
+
     .folder-select-mobile {
       display: none;
       width: 100%;
@@ -215,25 +252,7 @@
       margin-bottom: 1rem;
       font-size: 1rem;
     }
-    @media (max-width: 768px) {
-      .folder-tabs-desktop { display: none; }
-      .folder-select-mobile { display: block; }
-    }
-
-    .folder-tabs-desktop {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-    }
-    .folder-tab {
-      padding: 0.4rem 1rem;
-      border-radius: 2rem;
-      background: rgba(255,255,255,0.05);
-      cursor: pointer;
-      color: var(--text-secondary);
-    }
-    .folder-tab.active { background: var(--accent); color: white; }
+    @media (max-width: 768px) { .folder-select-mobile { display: block; } }
 
     /* Bottom nav */
     .bottom-nav {
@@ -246,7 +265,7 @@
       bottom: 0;
       left: 0;
       right: 0;
-      z-index: 20;
+      z-index: 25;
     }
     @media (max-width: 768px) {
       .bottom-nav { display: flex; }
@@ -258,26 +277,26 @@
       color: var(--text-secondary);
       background: transparent;
       box-shadow: none;
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
     }
     .bottom-nav .nav-item.active { color: var(--accent); }
 
-    /* Viewer modal */
+    /* Viewer */
     .viewer-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.95);
+      background: rgba(0,0,0,0.96);
       z-index: 100;
       display: flex;
       align-items: center;
       justify-content: center;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.3s;
+      transition: opacity 0.25s;
     }
-    .viewer-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .viewer-overlay.active { opacity: 1; pointer-events: auto; }
     .viewer-content {
       width: 100%;
       height: 100%;
@@ -285,16 +304,15 @@
       align-items: center;
       justify-content: center;
       position: relative;
-      touch-action: pan-y pinch-zoom;
     }
     .viewer-media {
       max-width: 95%;
       max-height: 90%;
       object-fit: contain;
       border-radius: 0.5rem;
-      transition: transform 0.3s;
       user-select: none;
       -webkit-user-select: none;
+      transition: transform 0.2s ease-out;
     }
     .viewer-close {
       position: absolute;
@@ -304,25 +322,31 @@
       color: white;
       border: none;
       font-size: 2rem;
-      width: 50px;
-      height: 50px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
       cursor: pointer;
       z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .viewer-nav {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.25);
       color: white;
       border: none;
       font-size: 2rem;
-      padding: 0.5rem 1rem;
+      padding: 0.4rem 0.8rem;
       cursor: pointer;
       border-radius: 0.5rem;
       z-index: 5;
+      transition: opacity 0.3s;
+      opacity: 0;
     }
+    .viewer-overlay.interacting .viewer-nav { opacity: 1; }
     .viewer-prev { left: 10px; }
     .viewer-next { right: 10px; }
     .viewer-counter {
@@ -337,26 +361,38 @@
       font-size: 0.9rem;
     }
     .hidden { display: none !important; }
+    .rename-input {
+      background: var(--bg-input, #252d3f);
+      border: 1px solid var(--accent);
+      border-radius: 0.5rem;
+      color: white;
+      padding: 0.3rem 0.5rem;
+      width: 120px;
+      outline: none;
+    }
   </style>
 </head>
 <body>
+<!-- Nút mở sidebar trên mobile -->
+<div class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></div>
+
 <!-- Auth Page -->
-<div id="authPage" class="auth-container">
-  <div class="auth-box" id="loginForm">
+<div id="authPage" class="auth-container" style="display:flex; align-items:center; justify-content:center; height:100vh; background:radial-gradient(circle at top, #1e293b, #0b0f19);">
+  <div class="auth-box" id="loginForm" style="background:rgba(30,37,56,0.9); backdrop-filter:blur(20px); border:1px solid var(--border); padding:2.5rem; border-radius:2rem; width:90%; max-width:400px; box-shadow:0 15px 30px rgba(0,0,0,0.5);">
     <h2><i class="fas fa-lock"></i> Đăng nhập</h2>
     <input type="text" id="loginUsername" placeholder="Tên đăng nhập" autocomplete="off">
     <input type="password" id="loginPassword" placeholder="Mật khẩu">
     <button id="loginBtn"><i class="fas fa-sign-in-alt"></i> Đăng nhập</button>
-    <div class="auth-toggle">Chưa có tài khoản? <span id="showRegister">Đăng ký</span></div>
+    <div class="auth-toggle" style="color:var(--text-secondary);">Chưa có tài khoản? <span id="showRegister" style="color:var(--accent);">Đăng ký</span></div>
     <div id="loginError" class="error-msg"></div>
   </div>
-  <div class="auth-box hidden" id="registerForm">
+  <div class="auth-box hidden" id="registerForm" style="background:rgba(30,37,56,0.9); backdrop-filter:blur(20px); border:1px solid var(--border); padding:2.5rem; border-radius:2rem; width:90%; max-width:400px; box-shadow:0 15px 30px rgba(0,0,0,0.5);">
     <h2><i class="fas fa-user-plus"></i> Đăng ký</h2>
     <input type="text" id="regUsername" placeholder="Tên đăng nhập">
     <input type="password" id="regPassword" placeholder="Mật khẩu (≥ 4 ký tự)">
     <input type="password" id="regConfirm" placeholder="Xác nhận mật khẩu">
     <button id="registerBtn"><i class="fas fa-check"></i> Tạo tài khoản</button>
-    <div class="auth-toggle">Đã có tài khoản? <span id="showLogin">Đăng nhập</span></div>
+    <div class="auth-toggle" style="color:var(--text-secondary);">Đã có tài khoản? <span id="showLogin" style="color:var(--accent);">Đăng nhập</span></div>
     <div id="registerError" class="error-msg"></div>
   </div>
 </div>
@@ -367,7 +403,8 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <i class="fas fa-cloud-upload-alt"></i> Vault
+        <span><i class="fas fa-cloud-upload-alt"></i> Vault</span>
+        <button class="sidebar-close-mobile" id="sidebarCloseMobile"><i class="fas fa-times"></i></button>
       </div>
       <nav class="nav-menu">
         <div class="nav-item active" data-page="library"><i class="fas fa-images"></i> Thư viện</div>
@@ -392,9 +429,7 @@
       <!-- Page Library -->
       <div id="page-library" class="page active">
         <h2 id="libraryTitle"><i class="fas fa-photo-video"></i> Tất cả</h2>
-        <!-- Folder select cho mobile -->
         <select id="folderSelectMobile" class="folder-select-mobile"></select>
-        <!-- Folder tabs desktop -->
         <div class="folder-tabs-desktop" id="folderTabsDesktop"></div>
         <div class="gallery" id="mediaGallery"></div>
       </div>
@@ -441,13 +476,11 @@
 
 <script>
   (() => {
-    // Môi trường
     if (location.protocol === 'file:') {
-      document.body.innerHTML = '<div style="color:white;text-align:center;padding:2rem;">Vui lòng dùng Live Server hoặc GitHub Pages.</div>';
+      document.body.innerHTML = '<div style="color:white;text-align:center;padding:2rem;">Vui lòng dùng Live Server.</div>';
       return;
     }
 
-    // Firebase
     firebase.initializeApp({
       apiKey: "AIzaSyBG7rSMk9FqD9GgNYwApXlsPBnxeyZi8qU",
       authDomain: "xyzweb-906a1.firebaseapp.com",
@@ -462,7 +495,7 @@
     let currentUser = null, currentFolderId = null, foldersCache = [], allMediaCache = [];
     const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 
-    // Auth elements
+    // Auth
     const authPage = $('#authPage'), appMain = $('#appMain');
     const loginForm = $('#loginForm'), registerForm = $('#registerForm');
     const loginUsername = $('#loginUsername'), loginPassword = $('#loginPassword'), loginBtn = $('#loginBtn'), loginError = $('#loginError');
@@ -471,6 +504,7 @@
     const displayUser = $('#displayUser'), logoutBtn = $('#logoutBtn'), mobileLogout = $('#mobileLogout');
 
     // App elements
+    const sidebar = $('#sidebar'), mobileMenuBtn = $('#mobileMenuBtn'), sidebarCloseMobile = $('#sidebarCloseMobile');
     const folderList = $('#folderList'), folderTabsDesktop = $('#folderTabsDesktop'), folderSelectMobile = $('#folderSelectMobile');
     const uploadFolderSelect = $('#uploadFolderSelect'), mediaGallery = $('#mediaGallery'), libraryTitle = $('#libraryTitle');
     const newFolderName = $('#newFolderName'), createFolderBtn = $('#createFolderBtn');
@@ -478,14 +512,17 @@
     const viewerOverlay = $('#viewerOverlay'), viewerContent = $('#viewerContent'), viewerClose = $('#viewerClose');
     const viewerPrev = $('#viewerPrev'), viewerNext = $('#viewerNext'), viewerCounter = $('#viewerCounter');
 
-    // Hash
+    // Mobile sidebar toggle
+    mobileMenuBtn.addEventListener('click', () => sidebar.classList.add('open'));
+    sidebarCloseMobile.addEventListener('click', () => sidebar.classList.remove('open'));
+    // Đóng sidebar khi bấm ra ngoài (click vào main)
+    $('#mainContent').addEventListener('click', () => { if (window.innerWidth <= 768) sidebar.classList.remove('open'); });
+
     function hash(p, s) { return sha256(p + s); }
 
-    // Auth UI
     showRegister.onclick = () => { loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
     showLogin.onclick = () => { registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
 
-    // Đăng ký
     registerBtn.onclick = async () => {
       const u = regUsername.value.trim(), p = regPassword.value, c = regConfirm.value;
       if(!u||!p||!c) { registerError.textContent='Vui lòng điền đầy đủ.'; return; }
@@ -504,7 +541,6 @@
       } catch(e) { registerError.textContent = 'Lỗi: '+e.message; }
     };
 
-    // Đăng nhập
     loginBtn.onclick = async () => {
       const u = loginUsername.value.trim(), p = loginPassword.value;
       if(!u||!p) { loginError.textContent='Vui lòng nhập đầy đủ.'; return; }
@@ -525,7 +561,6 @@
       } catch(e) { loginError.textContent = 'Lỗi: '+e.message; }
     };
 
-    // Logout
     function logout() {
       currentUser = null;
       localStorage.removeItem('vaultUser');
@@ -534,10 +569,10 @@
       loginForm.classList.remove('hidden'); registerForm.classList.add('hidden');
       loginError.textContent=''; registerError.textContent='';
       allMediaCache = []; foldersCache = [];
+      sidebar.classList.remove('open');
     }
     logoutBtn.onclick = logout; mobileLogout.onclick = logout;
 
-    // Kiểm tra phiên
     async function checkSession() {
       const saved = localStorage.getItem('vaultUser');
       if(saved) {
@@ -555,40 +590,64 @@
       authPage.classList.remove('hidden'); appMain.classList.add('hidden');
     }
 
-    // Menu chuyển trang
     function switchPage(page) {
       $$('.page').forEach(p => p.classList.remove('active'));
       $('#page-'+page).classList.add('active');
       $$('.nav-item').forEach(i => i.classList.remove('active'));
       document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(el => el.classList.add('active'));
+      if (window.innerWidth <= 768) sidebar.classList.remove('open');
     }
     $$('.nav-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
 
-    // Folders
     async function loadFolders() {
       const snap = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
       foldersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderFolders();
     }
+
     function renderFolders() {
       folderList.innerHTML = '';
       folderTabsDesktop.innerHTML = '<span class="folder-tab active" data-folder="">Tất cả</span>';
       folderSelectMobile.innerHTML = '<option value="">Tất cả</option>';
       uploadFolderSelect.innerHTML = '<option value="">-- Thư mục gốc --</option>';
       foldersCache.forEach(f => {
-        folderList.innerHTML += `<div class="folder-item" data-folder="${f.id}"><i class="fas fa-folder"></i> ${f.name}</div>`;
+        folderList.innerHTML += `
+          <div class="folder-item" data-folder="${f.id}">
+            <i class="fas fa-folder"></i> <span class="folder-name">${f.name}</span>
+            <button class="rename-btn" data-id="${f.id}" data-name="${f.name}"><i class="fas fa-pen"></i></button>
+          </div>`;
         folderTabsDesktop.innerHTML += `<span class="folder-tab" data-folder="${f.id}">${f.name}</span>`;
         folderSelectMobile.innerHTML += `<option value="${f.id}">${f.name}</option>`;
         uploadFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
       });
-      // Events
-      document.querySelectorAll('.folder-item').forEach(el => el.onclick = () => {
-        currentFolderId = el.dataset.folder;
-        libraryTitle.innerHTML = `<i class="fas fa-folder-open"></i> ${el.textContent.trim()}`;
-        switchPage('library');
-        applyFilter();
-        highlightFolder(el.dataset.folder);
+
+      // Folder item click
+      document.querySelectorAll('.folder-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.rename-btn')) return; // nếu bấm nút rename
+          currentFolderId = el.dataset.folder;
+          libraryTitle.innerHTML = `<i class="fas fa-folder-open"></i> ${el.querySelector('.folder-name').textContent}`;
+          switchPage('library');
+          applyFilter();
+          highlightFolder(el.dataset.folder);
+        });
       });
+
+      // Rename button
+      document.querySelectorAll('.rename-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const folderId = btn.dataset.id;
+          const oldName = btn.dataset.name;
+          const newName = prompt('Nhập tên mới:', oldName);
+          if (newName && newName.trim() !== '' && newName.trim() !== oldName) {
+            await db.collection('users').doc(currentUser).collection('folders').doc(folderId).update({ name: newName.trim() });
+            loadFolders();
+          }
+        });
+      });
+
+      // Tabs
       document.querySelectorAll('.folder-tab').forEach(tab => tab.onclick = () => {
         const fid = tab.dataset.folder || null;
         currentFolderId = fid;
@@ -598,6 +657,7 @@
         folderSelectMobile.value = fid || '';
         applyFilter();
       });
+
       folderSelectMobile.onchange = () => {
         const val = folderSelectMobile.value;
         currentFolderId = val || null;
@@ -605,10 +665,12 @@
         applyFilter();
       };
     }
+
     function highlightFolder(fid) {
       document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
       if(fid) document.querySelector(`.folder-item[data-folder="${fid}"]`)?.classList.add('active');
     }
+
     createFolderBtn.onclick = async () => {
       const name = newFolderName.value.trim();
       if(!name) return;
@@ -617,17 +679,24 @@
       loadFolders();
     };
 
-    // Media
     async function loadAllMedia() {
       const snap = await db.collection('users').doc(currentUser).collection('media').orderBy('created_at', 'desc').get();
       allMediaCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     }
+
     function applyFilter() {
       const filtered = currentFolderId ? allMediaCache.filter(m => m.folder_id === currentFolderId) : allMediaCache;
       renderMedia(filtered);
     }
 
-    // Upload
+    // Helper tạo thumbnail URL từ Cloudinary (video -> image)
+    function getThumbnailUrl(file) {
+      if (file.resource_type === 'video' && file.public_id) {
+        return `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/so_1,f_jpg,w_400,h_300,c_fill/${file.public_id}.jpg`;
+      }
+      return file.url; // ảnh giữ nguyên
+    }
+
     fileInput.onchange = () => fileNameEl.innerHTML = fileInput.files[0] ? `<i class="far fa-file"></i> ${fileInput.files[0].name}` : '<i class="far fa-file"></i> Chưa có tệp';
     uploadBtn.onclick = async () => {
       const file = fileInput.files[0];
@@ -651,7 +720,6 @@
       } catch(e) { uploadStatus.textContent = 'Lỗi: '+e.message; }
     };
 
-    // Render media (không tên file, có nút xóa góc)
     function renderMedia(files) {
       mediaGallery.innerHTML = '';
       if(!files.length) {
@@ -662,14 +730,13 @@
       files.forEach((file, index) => {
         const card = document.createElement('div');
         card.className = 'media-card';
-        card.dataset.index = index; // lưu index để viewer biết
-        const isVideo = file.resource_type === 'video';
-        const el = isVideo ? document.createElement('video') : document.createElement('img');
-        el.src = file.url;
-        if(isVideo) { el.controls = false; el.preload = 'metadata'; }
-        el.onerror = () => { el.style.display='none'; card.innerHTML+='<div style="padding:1rem;color:var(--danger);">⚠️</div>'; };
-        card.appendChild(el);
-        // Nút xóa
+        card.dataset.index = index;
+        const img = document.createElement('img');
+        img.src = getThumbnailUrl(file);
+        img.alt = file.original_name || '';
+        img.loading = 'lazy';
+        img.onerror = () => { img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150"><rect fill="%231e2538" width="200" height="150"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239aa4bf">?</text></svg>'; };
+        card.appendChild(img);
         const delBtn = document.createElement('button');
         delBtn.className = 'delete-btn';
         delBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
@@ -682,35 +749,51 @@
           applyFilter();
         };
         card.appendChild(delBtn);
-        // Click mở viewer
-        card.onclick = () => openViewer(files, index);
+        card.addEventListener('click', () => openViewer(files, index));
         frag.appendChild(card);
       });
       mediaGallery.appendChild(frag);
     }
 
-    // Viewer (vuốt)
+    // Viewer logic
     let viewerFiles = [], viewerIndex = 0;
-    let touchStartX = 0, touchDist = 0;
+    let touchStartX = 0, touchDist = 0, isDragging = false;
+    let hideControlsTimer;
+
     function openViewer(files, index) {
       viewerFiles = files;
       viewerIndex = index;
       viewerOverlay.classList.add('active');
+      viewerOverlay.classList.add('interacting'); // show nav initially
+      clearTimeout(hideControlsTimer);
+      hideControlsTimer = setTimeout(() => viewerOverlay.classList.remove('interacting'), 3000);
       updateViewer();
     }
+
     function closeViewer() {
       viewerOverlay.classList.remove('active');
       viewerContent.innerHTML = '';
+      clearTimeout(hideControlsTimer);
     }
+
     viewerClose.onclick = closeViewer;
-    viewerOverlay.onclick = (e) => { if(e.target === viewerOverlay) closeViewer(); };
+    viewerOverlay.addEventListener('click', (e) => {
+      if (e.target === viewerOverlay) closeViewer();
+    });
+
+    // Hiện controls khi chạm vào viewer
+    viewerContent.addEventListener('click', () => {
+      viewerOverlay.classList.add('interacting');
+      clearTimeout(hideControlsTimer);
+      hideControlsTimer = setTimeout(() => viewerOverlay.classList.remove('interacting'), 3000);
+    });
 
     function updateViewer() {
       const file = viewerFiles[viewerIndex];
       viewerContent.innerHTML = '';
       const isVideo = file.resource_type === 'video';
       let media;
-      if(isVideo) {
+      if (isVideo) {
         media = document.createElement('video');
         media.src = file.url;
         media.controls = true;
@@ -724,20 +807,25 @@
       media.setAttribute('draggable', 'false');
       viewerContent.appendChild(media);
       viewerCounter.textContent = `${viewerIndex+1}/${viewerFiles.length}`;
-      // Touch events
+
+      // Vuốt
       media.addEventListener('touchstart', e => {
         touchStartX = e.touches[0].clientX;
         media.style.transition = 'none';
+        isDragging = true;
       });
       media.addEventListener('touchmove', e => {
+        if (!isDragging) return;
         touchDist = e.touches[0].clientX - touchStartX;
         media.style.transform = `translateX(${touchDist}px)`;
       });
       media.addEventListener('touchend', () => {
-        media.style.transition = 'transform 0.3s';
-        if(Math.abs(touchDist) > 50) {
-          if(touchDist < 0 && viewerIndex < viewerFiles.length-1) viewerIndex++;
-          else if(touchDist > 0 && viewerIndex > 0) viewerIndex--;
+        if (!isDragging) return;
+        isDragging = false;
+        media.style.transition = 'transform 0.2s ease-out';
+        if (Math.abs(touchDist) > 60) {
+          if (touchDist < 0 && viewerIndex < viewerFiles.length-1) viewerIndex++;
+          else if (touchDist > 0 && viewerIndex > 0) viewerIndex--;
         }
         media.style.transform = 'translateX(0)';
         updateViewer();
@@ -746,7 +834,6 @@
 
     viewerPrev.onclick = () => { if(viewerIndex>0) { viewerIndex--; updateViewer(); } };
     viewerNext.onclick = () => { if(viewerIndex<viewerFiles.length-1) { viewerIndex++; updateViewer(); } };
-    // Phím tắt
     document.addEventListener('keydown', e => {
       if(viewerOverlay.classList.contains('active')) {
         if(e.key === 'ArrowLeft') viewerPrev.click();
@@ -769,7 +856,6 @@
       }
     });
 
-    // Bắt đầu
     checkSession();
   })();
 </script>
