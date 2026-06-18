@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>📁 Kho lưu trữ</title>
+  <title>📁 Kho lưu trữ cá nhân</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
     body { background:#0f172a; color:#e2e8f0; display:flex; flex-direction:column; height:100vh; }
@@ -68,18 +68,31 @@
     .auth-box { background:rgba(255,255,255,0.05); padding:2rem; border-radius:2rem; max-width:400px; width:90%; }
     .auth-box input { width:100%; margin-bottom:1rem; padding:0.8rem; border-radius:1rem; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2); }
     .auth-box button { width:100%; padding:0.8rem; border-radius:1rem; background:#2563eb; color:white; border:none; margin-bottom:0.5rem; cursor:pointer; }
+    .auth-toggle { text-align:center; color:#94a3b8; font-size:0.9rem; margin-top:1rem; }
+    .auth-toggle span { color:#38bdf8; cursor:pointer; text-decoration:underline; }
+    .auth-box .confirm-password { margin-bottom:1rem; }
+    .error-message { color:#f87171; font-size:0.85rem; margin-top:0.5rem; }
   </style>
 </head>
 <body>
 <!-- Auth Page -->
 <div id="authPage" class="auth-fullpage hidden">
-  <div class="auth-box">
+  <div class="auth-box" id="loginForm">
     <h2>🔐 Đăng nhập</h2>
-    <input type="text" id="username" placeholder="Email">
-    <input type="password" id="password" placeholder="Mật khẩu">
+    <input type="text" id="loginUsername" placeholder="Tên đăng nhập">
+    <input type="password" id="loginPassword" placeholder="Mật khẩu">
     <button id="loginBtn">🚪 Đăng nhập</button>
-    <button id="registerBtn" style="background:rgba(255,255,255,0.1);">✨ Tạo tài khoản</button>
-    <div id="authMessage" style="color:#f87171; margin-top:0.5rem;"></div>
+    <div class="auth-toggle">Chưa có tài khoản? <span id="showRegister">Đăng ký ngay</span></div>
+    <div id="loginError" class="error-message"></div>
+  </div>
+  <div class="auth-box hidden" id="registerForm">
+    <h2>✨ Đăng ký</h2>
+    <input type="text" id="regUsername" placeholder="Tên đăng nhập">
+    <input type="password" id="regPassword" placeholder="Mật khẩu (tối thiểu 4 ký tự)">
+    <input type="password" id="regConfirm" placeholder="Xác nhận mật khẩu" class="confirm-password">
+    <button id="registerBtn">📝 Tạo tài khoản</button>
+    <div class="auth-toggle">Đã có tài khoản? <span id="showLogin">Đăng nhập</span></div>
+    <div id="registerError" class="error-message"></div>
   </div>
 </div>
 
@@ -130,12 +143,11 @@
 
 <!-- Firebase & Cloudinary SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 
 <script>
-  // ===== CẤU HÌNH CỦA BẠN =====
+  // ===== CẤU HÌNH =====
   const firebaseConfig = {
     apiKey: "AIzaSyBG7rSMk9FqD9GgNYwApXlsPBnxeyZi8qU",
     authDomain: "xyzweb-906a1.firebaseapp.com",
@@ -144,69 +156,200 @@
     messagingSenderId: "268520089231",
     appId: "1:268520089231:web:f9fcf91be875cda72272fa"
   };
-
   const CLOUDINARY_CLOUD_NAME = "diiwvsz3o";
   const CLOUDINARY_UPLOAD_PRESET = "xyzweb";
 
   // Khởi tạo Firebase
   firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentUser = null;
+  // ===== BIẾN TOÀN CỤC =====
+  let currentUser = null;            // username đã đăng nhập
   let currentFolderId = null;
   let foldersCache = [];
 
+  // Auth UI elements
   const authPage = document.getElementById('authPage');
   const appMain = document.getElementById('appMain');
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const loginUsername = document.getElementById('loginUsername');
+  const loginPassword = document.getElementById('loginPassword');
   const loginBtn = document.getElementById('loginBtn');
+  const loginError = document.getElementById('loginError');
+  const regUsername = document.getElementById('regUsername');
+  const regPassword = document.getElementById('regPassword');
+  const regConfirm = document.getElementById('regConfirm');
   const registerBtn = document.getElementById('registerBtn');
+  const registerError = document.getElementById('registerError');
+  const showRegister = document.getElementById('showRegister');
+  const showLogin = document.getElementById('showLogin');
+  const displayUser = document.getElementById('displayUser');
   const logoutBtn = document.getElementById('logoutBtn');
   const mobileLogout = document.getElementById('mobileLogout');
-  const displayUser = document.getElementById('displayUser');
 
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      displayUser.textContent = user.email;
-      authPage.classList.add('hidden');
-      appMain.classList.remove('hidden');
-      loadFolders();
-      loadMedia();
-    } else {
-      currentUser = null;
-      authPage.classList.remove('hidden');
-      appMain.classList.add('hidden');
+  // ===== HÀM BĂM MẬT KHẨU (SHA-256) =====
+  async function hashPassword(password, salt) {
+    const msgUint8 = new TextEncoder().encode(password + salt);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ===== XỬ LÝ FORM CHUYỂN ĐỔI =====
+  showRegister.onclick = () => {
+    loginForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+    clearErrors();
+  };
+  showLogin.onclick = () => {
+    registerForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+    clearErrors();
+  };
+  function clearErrors() {
+    loginError.textContent = '';
+    registerError.textContent = '';
+  }
+
+  // ===== ĐĂNG KÝ =====
+  registerBtn.onclick = async () => {
+    const username = regUsername.value.trim();
+    const password = regPassword.value;
+    const confirm = regConfirm.value;
+
+    if (!username || !password || !confirm) {
+      registerError.textContent = 'Vui lòng điền đầy đủ thông tin.';
+      return;
     }
-  });
-
-  loginBtn.onclick = async () => {
-    const email = document.getElementById('username').value;
-    const pass = document.getElementById('password').value;
+    if (password.length < 4) {
+      registerError.textContent = 'Mật khẩu tối thiểu 4 ký tự.';
+      return;
+    }
+    if (password !== confirm) {
+      registerError.textContent = 'Mật khẩu xác nhận không khớp.';
+      return;
+    }
+    // Kiểm tra username đã tồn tại chưa
+    const userDoc = await db.collection('users').doc(username).get();
+    if (userDoc.exists) {
+      registerError.textContent = 'Tên đăng nhập đã tồn tại.';
+      return;
+    }
+    // Tạo salt (dùng username + chuỗi bí mật cố định)
+    const salt = username + 'media_vault_salt_2024';
+    const hashed = await hashPassword(password, salt);
     try {
-      await auth.signInWithEmailAndPassword(email, pass);
+      await db.collection('users').doc(username).set({
+        username: username,
+        passwordHash: hashed,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      // Đăng ký thành công -> đăng nhập luôn
+      loginAfterRegister(username);
     } catch (e) {
-      document.getElementById('authMessage').textContent = e.message;
+      registerError.textContent = 'Lỗi: ' + e.message;
     }
   };
 
-  registerBtn.onclick = async () => {
-    const email = document.getElementById('username').value;
-    const pass = document.getElementById('password').value;
-    if (pass.length < 6) {
-      document.getElementById('authMessage').textContent = 'Mật khẩu tối thiểu 6 ký tự';
+  function loginAfterRegister(username) {
+    // Tự động điền vào form login (có thể gọi login trực tiếp)
+    regUsername.value = '';
+    regPassword.value = '';
+    regConfirm.value = '';
+    registerForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+    loginUsername.value = username;
+    loginPassword.value = '';
+    loginError.textContent = 'Đăng ký thành công. Mời bạn đăng nhập.';
+  }
+
+  // ===== ĐĂNG NHẬP =====
+  loginBtn.onclick = async () => {
+    const username = loginUsername.value.trim();
+    const password = loginPassword.value;
+    if (!username || !password) {
+      loginError.textContent = 'Vui lòng nhập tên đăng nhập và mật khẩu.';
       return;
     }
     try {
-      await auth.createUserWithEmailAndPassword(email, pass);
+      const userDoc = await db.collection('users').doc(username).get();
+      if (!userDoc.exists) {
+        loginError.textContent = 'Tài khoản không tồn tại.';
+        return;
+      }
+      const userData = userDoc.data();
+      const salt = username + 'media_vault_salt_2024';
+      const hashedInput = await hashPassword(password, salt);
+      if (hashedInput === userData.passwordHash) {
+        // Đăng nhập thành công
+        currentUser = username;
+        localStorage.setItem('mediaVaultUser', username);
+        displayUser.textContent = username;
+        authPage.classList.add('hidden');
+        appMain.classList.remove('hidden');
+        loadFolders();
+        loadMedia();
+        // Xóa form
+        loginUsername.value = '';
+        loginPassword.value = '';
+        loginError.textContent = '';
+      } else {
+        loginError.textContent = 'Sai mật khẩu.';
+      }
     } catch (e) {
-      document.getElementById('authMessage').textContent = e.message;
+      loginError.textContent = 'Lỗi: ' + e.message;
     }
   };
 
-  logoutBtn.onclick = () => auth.signOut();
-  mobileLogout.onclick = () => auth.signOut();
+  // ===== ĐĂNG XUẤT =====
+  function doLogout() {
+    currentUser = null;
+    localStorage.removeItem('mediaVaultUser');
+    authPage.classList.remove('hidden');
+    appMain.classList.add('hidden');
+    // Reset form
+    loginForm.classList.remove('hidden');
+    registerForm.classList.add('hidden');
+    loginUsername.value = '';
+    loginPassword.value = '';
+    clearErrors();
+  }
+  logoutBtn.onclick = doLogout;
+  mobileLogout.onclick = doLogout;
 
+  // ===== KIỂM TRA ĐĂNG NHẬP KHI TẢI TRANG =====
+  function checkSavedLogin() {
+    const savedUser = localStorage.getItem('mediaVaultUser');
+    if (savedUser) {
+      // Kiểm tra xem user còn tồn tại không
+      db.collection('users').doc(savedUser).get().then(doc => {
+        if (doc.exists) {
+          currentUser = savedUser;
+          displayUser.textContent = savedUser;
+          authPage.classList.add('hidden');
+          appMain.classList.remove('hidden');
+          loadFolders();
+          loadMedia();
+        } else {
+          localStorage.removeItem('mediaVaultUser');
+          showAuthPage();
+        }
+      }).catch(() => {
+        showAuthPage();
+      });
+    } else {
+      showAuthPage();
+    }
+  }
+  function showAuthPage() {
+    authPage.classList.remove('hidden');
+    appMain.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+    registerForm.classList.add('hidden');
+  }
+
+  // ===== MENU & THƯ MỤC (giữ nguyên) =====
   function switchPage(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-'+page).classList.add('active');
@@ -218,7 +361,8 @@
   document.querySelectorAll('.bottom-nav .nav-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
 
   async function loadFolders() {
-    const snapshot = await db.collection('users').doc(currentUser.uid).collection('folders').orderBy('name').get();
+    if (!currentUser) return;
+    const snapshot = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
     foldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderFolders();
   }
@@ -254,12 +398,13 @@
 
   document.getElementById('createFolderBtn').onclick = async () => {
     const name = document.getElementById('newFolderName').value.trim();
-    if (!name) return;
-    await db.collection('users').doc(currentUser.uid).collection('folders').add({ name });
+    if (!name || !currentUser) return;
+    await db.collection('users').doc(currentUser).collection('folders').add({ name });
     document.getElementById('newFolderName').value = '';
     loadFolders();
   };
 
+  // ===== UPLOAD =====
   const fileInput = document.getElementById('fileInput');
   const fileName = document.getElementById('fileName');
   const uploadBtn = document.getElementById('uploadBtn');
@@ -271,6 +416,7 @@
   };
 
   uploadBtn.onclick = async () => {
+    if (!currentUser) return;
     const file = fileInput.files[0];
     if (!file) { uploadStatus.textContent = 'Chọn tệp'; return; }
     uploadStatus.textContent = '⏳ Đang tải lên Cloudinary...';
@@ -294,7 +440,7 @@
         folder_id: folderId,
         created_at: firebase.firestore.FieldValue.serverTimestamp()
       };
-      await db.collection('users').doc(currentUser.uid).collection('media').add(mediaDoc);
+      await db.collection('users').doc(currentUser).collection('media').add(mediaDoc);
       uploadStatus.textContent = '✅ Upload thành công!';
       fileInput.value = '';
       fileName.textContent = 'Chưa chọn';
@@ -306,8 +452,10 @@
     }
   };
 
+  // ===== LOAD MEDIA =====
   async function loadMedia() {
-    let query = db.collection('users').doc(currentUser.uid).collection('media').orderBy('created_at', 'desc');
+    if (!currentUser) return;
+    let query = db.collection('users').doc(currentUser).collection('media').orderBy('created_at', 'desc');
     if (currentFolderId) {
       query = query.where('folder_id', '==', currentFolderId);
     }
@@ -351,7 +499,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: file.public_id })
           });
-          await db.collection('users').doc(currentUser.uid).collection('media').doc(file.id).delete();
+          await db.collection('users').doc(currentUser).collection('media').doc(file.id).delete();
           loadMedia();
         }
       };
@@ -360,6 +508,9 @@
       gallery.appendChild(card);
     });
   }
+
+  // ===== KHỞI ĐỘNG =====
+  checkSavedLogin();
 </script>
 </body>
 </html>
