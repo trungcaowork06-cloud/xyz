@@ -205,7 +205,6 @@
     .bottom-nav .nav-item { flex-direction: column; font-size: 0.7rem; color: var(--text-secondary); background: transparent; box-shadow: none; display: flex; align-items: center; gap: 0.2rem; }
     .bottom-nav .nav-item.active { color: var(--accent); }
 
-    /* Viewer */
     .viewer-overlay {
       position: fixed; top:0; left:0; width:100%; height:100%;
       background: rgba(0,0,0,0.96); z-index: 100;
@@ -906,6 +905,56 @@
       applyFilter();
     }
 
+    // === Hàm tạo thumbnail cho video ===
+    function createVideoThumbnail(videoUrl) {
+      return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        video.crossOrigin = 'anonymous';
+        video.preload = 'metadata';
+        video.muted = true;
+        video.playsInline = true;
+        
+        const cleanup = () => {
+          video.removeEventListener('loadeddata', onLoaded);
+          video.removeEventListener('error', onError);
+        };
+
+        const onLoaded = () => {
+          video.currentTime = 0.1; // seek đến 0.1 giây
+        };
+
+        const onSeeked = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 180;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            cleanup();
+            video.removeEventListener('seeked', onSeeked);
+            resolve(dataUrl);
+          } catch (e) {
+            cleanup();
+            video.removeEventListener('seeked', onSeeked);
+            reject(e);
+          }
+        };
+
+        const onError = () => {
+          cleanup();
+          video.removeEventListener('seeked', onSeeked);
+          reject(new Error('Không thể tải video'));
+        };
+
+        video.addEventListener('loadeddata', onLoaded);
+        video.addEventListener('seeked', onSeeked);
+        video.addEventListener('error', onError);
+        video.src = videoUrl;
+        video.load();
+      });
+    }
+
     function renderRandomMedia(files) {
       randomGallery.innerHTML = '';
       const frag = document.createDocumentFragment();
@@ -914,10 +963,32 @@
         const card = document.createElement('div');
         card.className = 'media-card' + (isVideo ? ' video-thumb' : ' image-thumb');
         const img = document.createElement('img');
-        img.src = isVideo ? 'data:image/svg+xml,...' : (API_BASE + file.url);
         img.alt = file.original_name || '';
         img.loading = 'lazy';
-        img.onerror = () => { img.src = 'data:image/svg+xml,...'; };
+        // Ban đầu dùng placeholder cho video, ảnh dùng URL thật
+        if (isVideo) {
+          img.src = 'data:image/svg+xml,' + encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+              <rect width="200" height="200" fill="#1e2538" rx="10"/>
+              <polygon points="70,50 70,150 150,100" fill="#4f8cff"/>
+            </svg>
+          `);
+          // Tạo thumbnail thật
+          const videoUrl = API_BASE + (file.url || `/uploads/${file.filename}`);
+          createVideoThumbnail(videoUrl).then(dataUrl => {
+            img.src = dataUrl;
+          }).catch(() => {}); // fallback giữ placeholder
+        } else {
+          img.src = API_BASE + (file.url || `/uploads/${file.filename}`);
+        }
+        img.onerror = () => {
+          img.src = 'data:image/svg+xml,' + encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+              <rect width="200" height="200" fill="#1e2538" rx="10"/>
+              <text x="100" y="110" font-size="20" text-anchor="middle" fill="#9aa4bf">Ảnh lỗi</text>
+            </svg>
+          `);
+        };
         card.appendChild(img);
         const folderBtn = document.createElement('button');
         folderBtn.className = 'folder-link-btn';
@@ -1106,7 +1177,13 @@
 
     function getThumbnailUrl(file) {
       if (file.mimetype && file.mimetype.startsWith('video')) {
-        return 'data:image/svg+xml,...'; // placeholder video
+        // Trả về placeholder, sẽ được thay thế bất đồng bộ
+        return 'data:image/svg+xml,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+            <rect width="200" height="200" fill="#1e2538" rx="10"/>
+            <polygon points="70,50 70,150 150,100" fill="#4f8cff"/>
+          </svg>
+        `);
       }
       return API_BASE + (file.url || `/uploads/${file.filename}`);
     }
@@ -1239,11 +1316,16 @@
           };
           await new Promise((resolve, reject) => {
             xhr.onload = () => {
-              if (xhr.status === 200) {
+              if (xhr.status === 200 || xhr.status === 201) {
                 const res = JSON.parse(xhr.responseText);
                 resolve(res);
               } else {
-                reject(new Error(xhr.statusText));
+                try {
+                  const err = JSON.parse(xhr.responseText);
+                  reject(new Error(err.error || xhr.statusText));
+                } catch (e) {
+                  reject(new Error(xhr.statusText || 'Lỗi không xác định'));
+                }
               }
             };
             xhr.onerror = () => reject(new Error('Lỗi kết nối'));
@@ -1279,10 +1361,25 @@
         if (selectedMediaIds.has(file.id)) card.classList.add('selected');
         card.dataset.mediaId = file.id;
         const img = document.createElement('img');
-        img.src = getThumbnailUrl(file);
         img.alt = file.original_name || '';
         img.loading = 'lazy';
-        img.onerror = () => { img.src = 'data:image/svg+xml,...'; };
+        if (isVideo) {
+          img.src = getThumbnailUrl(file); // placeholder
+          const videoUrl = API_BASE + (file.url || `/uploads/${file.filename}`);
+          createVideoThumbnail(videoUrl).then(dataUrl => {
+            img.src = dataUrl;
+          }).catch(() => {});
+        } else {
+          img.src = getThumbnailUrl(file);
+        }
+        img.onerror = () => {
+          img.src = 'data:image/svg+xml,' + encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+              <rect width="200" height="200" fill="#1e2538" rx="10"/>
+              <text x="100" y="110" font-size="20" text-anchor="middle" fill="#9aa4bf">Ảnh lỗi</text>
+            </svg>
+          `);
+        };
         card.appendChild(img);
         const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.className = 'select-checkbox'; checkbox.checked = selectedMediaIds.has(file.id);
         checkbox.addEventListener('click', (e) => { e.stopPropagation(); toggleSelectMedia(file.id, card); });
