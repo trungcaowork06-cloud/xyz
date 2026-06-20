@@ -205,7 +205,7 @@
     .bottom-nav .nav-item { flex-direction: column; font-size: 0.7rem; color: var(--text-secondary); background: transparent; box-shadow: none; display: flex; align-items: center; gap: 0.2rem; }
     .bottom-nav .nav-item.active { color: var(--accent); }
 
-    /* Viewer cải tiến */
+    /* Viewer */
     .viewer-overlay {
       position: fixed; top:0; left:0; width:100%; height:100%;
       background: rgba(0,0,0,0.96); z-index: 100;
@@ -326,9 +326,7 @@
       z-index: 4;
       font-size: 0.8rem;
     }
-    .folder-link-btn:hover {
-      background: var(--accent);
-    }
+    .folder-link-btn:hover { background: var(--accent); }
   </style>
 </head>
 <body>
@@ -499,6 +497,9 @@
       return;
     }
 
+    // ===== CẤU HÌNH VPS =====
+    const API_BASE = 'http://32.199.171.12:3000';
+
     firebase.initializeApp({
       apiKey: "AIzaSyBG7rSMk9FqD9GgNYwApXlsPBnxeyZi8qU",
       authDomain: "xyzweb-906a1.firebaseapp.com",
@@ -508,12 +509,11 @@
       appId: "1:268520089231:web:f9fcf91be875cda72272fa"
     });
     const db = firebase.firestore();
-    const CLOUD_NAME = "diiwvsz3o";
-    const UPLOAD_PRESET = "xyzweb";
 
     let currentUser = null, currentFolderId = null, foldersCache = [], allMediaCache = [];
     let mediaFilterType = 'all';
     let selectedMediaIds = new Set();
+    let serverToken = null;
     const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 
     // Confirm modal helpers
@@ -594,12 +594,10 @@
       duplicateModal.classList.remove('active');
     });
 
-    // Xóa tất cả bản trùng (giữ 1 bản mỗi nhóm)
     deleteDuplicatesBtn.addEventListener('click', async () => {
       if (!duplicateGroups || duplicateGroups.length === 0) return;
       const toDelete = [];
       duplicateGroups.forEach(group => {
-        // Giữ phần tử đầu tiên, xóa các phần còn lại
         toDelete.push(...group.slice(1));
       });
       if (toDelete.length === 0) return;
@@ -614,15 +612,12 @@
       const batch = db.batch();
       for (const item of items) {
         batch.delete(db.collection('users').doc(currentUser).collection('media').doc(item.id));
-        if (item.public_id) {
-          try {
-            await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/delete_by_token`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token: item.public_id })
-            });
-          } catch (err) { console.error('Xóa Cloudinary thất bại:', err); }
-        }
+        try {
+          await fetch(`${API_BASE}/api/media/${item.id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${serverToken}` }
+          });
+        } catch (e) { console.error('Lỗi xóa file trên VPS:', e); }
       }
       await batch.commit();
       const idsToDelete = new Set(items.map(i => i.id));
@@ -693,7 +688,6 @@
     const uploadAllBtn = $('#uploadAllBtn');
     const uploadStatus = $('#uploadStatus');
     const uploadProgress = $('#uploadProgress');
-
     let filesToUpload = [];
 
     // Rubber band
@@ -751,8 +745,22 @@
     sidebarCloseMobile.addEventListener('click', () => sidebar.classList.remove('open'));
     $('#mainContent').addEventListener('click', () => { if (window.innerWidth <= 768) sidebar.classList.remove('open'); });
 
-    function hash(p, s) { return sha256(p + s); }
+    // API call helper
+    async function apiCall(url, options = {}) {
+      const headers = options.headers || {};
+      if (serverToken) headers['Authorization'] = `Bearer ${serverToken}`;
+      if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+      const res = await fetch(`${API_BASE}${url}`, { ...options, headers });
+      if (res.status === 401) {
+        logout();
+        throw new Error('Phiên đăng nhập hết hạn.');
+      }
+      return res.json();
+    }
 
+    // Auth functions
     showRegister.onclick = () => { loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
     showLogin.onclick = () => { registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
 
@@ -762,27 +770,42 @@
       if(p.length<4) { registerError.textContent='Mật khẩu tối thiểu 4 ký tự.'; return; }
       if(p!==c) { registerError.textContent='Xác nhận không khớp.'; return; }
       try {
-        const doc = await db.collection('users').doc(u).get();
-        if(doc.exists) { registerError.textContent='Tên đăng nhập đã tồn tại.'; return; }
-        await db.collection('users').doc(u).set({
-          username: u, passwordHash: hash(p, u+'vault_salt'),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        const data = await apiCall('/api/register', {
+          method: 'POST',
+          body: JSON.stringify({ username: u, password: p })
         });
-        regUsername.value=''; regPassword.value=''; regConfirm.value='';
-        registerForm.classList.add('hidden'); loginForm.classList.remove('hidden');
-        loginError.textContent='Đăng ký thành công!';
-      } catch(e) { registerError.textContent = 'Lỗi: '+e.message; }
+        if (data.token) {
+          serverToken = data.token;
+          currentUser = u;
+          localStorage.setItem('vaultUser', u);
+          localStorage.setItem('vaultToken', serverToken);
+          displayUser.textContent = u;
+          authPage.classList.add('hidden');
+          appMain.classList.remove('hidden');
+          regUsername.value=''; regPassword.value=''; regConfirm.value='';
+          await loadFolders();
+          await loadAllMedia();
+          applyFilter();
+          showRandomMedia();
+        } else {
+          registerError.textContent = data.error || 'Lỗi đăng ký.';
+        }
+      } catch(e) { registerError.textContent = 'Lỗi kết nối: ' + e.message; }
     };
 
     loginBtn.onclick = async () => {
       const u = loginUsername.value.trim(), p = loginPassword.value;
       if(!u||!p) { loginError.textContent='Vui lòng nhập đầy đủ.'; return; }
       try {
-        const doc = await db.collection('users').doc(u).get();
-        if(!doc.exists) { loginError.textContent='Tài khoản không tồn tại.'; return; }
-        if(hash(p, u+'vault_salt') === doc.data().passwordHash) {
+        const data = await apiCall('/api/login', {
+          method: 'POST',
+          body: JSON.stringify({ username: u, password: p })
+        });
+        if (data.token) {
+          serverToken = data.token;
           currentUser = u;
           localStorage.setItem('vaultUser', u);
+          localStorage.setItem('vaultToken', serverToken);
           displayUser.textContent = u;
           authPage.classList.add('hidden');
           appMain.classList.remove('hidden');
@@ -791,13 +814,17 @@
           applyFilter();
           showRandomMedia();
           loginUsername.value=''; loginPassword.value='';
-        } else { loginError.textContent='Sai mật khẩu.'; }
-      } catch(e) { loginError.textContent = 'Lỗi: '+e.message; }
+        } else {
+          loginError.textContent = data.error || 'Sai tên đăng nhập hoặc mật khẩu.';
+        }
+      } catch(e) { loginError.textContent = 'Lỗi kết nối: ' + e.message; }
     };
 
     function logout() {
       currentUser = null;
+      serverToken = null;
       localStorage.removeItem('vaultUser');
+      localStorage.removeItem('vaultToken');
       authPage.classList.remove('hidden');
       appMain.classList.add('hidden');
       loginForm.classList.remove('hidden'); registerForm.classList.add('hidden');
@@ -810,21 +837,32 @@
     logoutBtn.onclick = logout; mobileLogout.onclick = logout;
 
     async function checkSession() {
-      const saved = localStorage.getItem('vaultUser');
-      if(saved) {
-        const doc = await db.collection('users').doc(saved).get();
-        if(doc.exists) {
-          currentUser = saved;
-          displayUser.textContent = saved;
-          authPage.classList.add('hidden'); appMain.classList.remove('hidden');
-          await loadFolders();
-          await loadAllMedia();
-          applyFilter();
-          showRandomMedia();
-          return;
-        }
+      const savedUser = localStorage.getItem('vaultUser');
+      const savedToken = localStorage.getItem('vaultToken');
+      if (savedUser && savedToken) {
+        try {
+          const res = await fetch(`${API_BASE}/api/me`, {
+            headers: { 'Authorization': `Bearer ${savedToken}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            currentUser = data.username;
+            serverToken = savedToken;
+            displayUser.textContent = currentUser;
+            authPage.classList.add('hidden');
+            appMain.classList.remove('hidden');
+            await loadFolders();
+            await loadAllMedia();
+            applyFilter();
+            showRandomMedia();
+            return;
+          }
+        } catch(e) {}
+        localStorage.removeItem('vaultUser');
+        localStorage.removeItem('vaultToken');
       }
-      authPage.classList.remove('hidden'); appMain.classList.add('hidden');
+      authPage.classList.remove('hidden');
+      appMain.classList.add('hidden');
     }
 
     function switchPage(page) {
@@ -876,7 +914,7 @@
         const card = document.createElement('div');
         card.className = 'media-card' + (isVideo ? ' video-thumb' : ' image-thumb');
         const img = document.createElement('img');
-        img.src = getThumbnailUrl(file);
+        img.src = isVideo ? 'data:image/svg+xml,...' : (API_BASE + file.url);
         img.alt = file.original_name || '';
         img.loading = 'lazy';
         img.onerror = () => { img.src = 'data:image/svg+xml,...'; };
@@ -904,6 +942,7 @@
       showRandomMedia();
     });
 
+    // Folders
     async function loadFolders() {
       const snap = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
       foldersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -913,10 +952,7 @@
     }
 
     function renderFolders() {
-      let folderItemsHTML = `
-        <div class="folder-item" data-folder="__unfiled__">
-          <i class="fas fa-box-open"></i> <span class="folder-name">Chưa phân loại</span>
-        </div>`;
+      let folderItemsHTML = `<div class="folder-item" data-folder="__unfiled__"><i class="fas fa-box-open"></i> <span class="folder-name">Chưa phân loại</span></div>`;
       foldersCache.forEach(f => {
         folderItemsHTML += `
           <div class="folder-item" data-folder="${f.id}">
@@ -929,30 +965,20 @@
       });
       folderList.innerHTML = folderItemsHTML;
 
-      let tabsHTML = '<span class="folder-tab active" data-folder="">Tất cả</span>';
-      tabsHTML += '<span class="folder-tab" data-folder="__unfiled__">📂 Chưa phân loại</span>';
-      foldersCache.forEach(f => {
-        tabsHTML += `<span class="folder-tab" data-folder="${f.id}">${f.name}</span>`;
-      });
+      let tabsHTML = '<span class="folder-tab active" data-folder="">Tất cả</span><span class="folder-tab" data-folder="__unfiled__">📂 Chưa phân loại</span>';
+      foldersCache.forEach(f => { tabsHTML += `<span class="folder-tab" data-folder="${f.id}">${f.name}</span>`; });
       folderTabsDesktop.innerHTML = tabsHTML;
 
-      let selectHTML = '<option value="">Tất cả</option>';
-      selectHTML += '<option value="__unfiled__">📂 Chưa phân loại</option>';
-      foldersCache.forEach(f => {
-        selectHTML += `<option value="${f.id}">${f.name}</option>`;
-      });
+      let selectHTML = '<option value="">Tất cả</option><option value="__unfiled__">📂 Chưa phân loại</option>';
+      foldersCache.forEach(f => { selectHTML += `<option value="${f.id}">${f.name}</option>`; });
       folderSelectMobile.innerHTML = selectHTML;
 
       defaultFolderSelect.innerHTML = '<option value="">-- Chọn thư mục mặc định --</option>';
-      foldersCache.forEach(f => {
-        defaultFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
-      });
+      foldersCache.forEach(f => { defaultFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`; });
       defaultFolderSelect.innerHTML += '<option value="__unfiled__">📂 Chưa phân loại (không thư mục)</option>';
 
       moveToFolderSelect.innerHTML = '<option value="">-- Chọn thư mục --</option>';
-      foldersCache.forEach(f => {
-        moveToFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
-      });
+      foldersCache.forEach(f => { moveToFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`; });
 
       document.querySelectorAll('#folderList .folder-item').forEach(el => {
         el.addEventListener('click', (e) => {
@@ -1014,12 +1040,8 @@
             await db.collection('users').doc(currentUser).collection('folders').doc(folderId).delete();
             allMediaCache = allMediaCache.map(m => m.folder_id === folderId ? {...m, folder_id: null} : m);
             loadFolders();
-            if (currentFolderId === folderId) {
-              currentFolderId = null;
-              libraryTitle.innerHTML = '<i class="fas fa-photo-video"></i> Tất cả';
-            }
-            clearSelection();
-            applyFilter();
+            if (currentFolderId === folderId) { currentFolderId = null; libraryTitle.innerHTML = '<i class="fas fa-photo-video"></i> Tất cả'; }
+            clearSelection(); applyFilter();
           }
         });
       });
@@ -1048,24 +1070,27 @@
     };
 
     async function loadAllMedia() {
-      const snap = await db.collection('users').doc(currentUser).collection('media').orderBy('created_at', 'desc').get();
-      allMediaCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      try {
+        const res = await fetch(`${API_BASE}/api/media`, {
+          headers: { 'Authorization': `Bearer ${serverToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          allMediaCache = data.files || [];
+        }
+      } catch (e) {
+        console.error('Lỗi tải media:', e);
+      }
     }
 
     function applyFilter() {
       let filtered = allMediaCache;
-      if (currentFolderId === '__unfiled__') {
-        filtered = filtered.filter(m => !m.folder_id);
-      } else if (currentFolderId) {
-        filtered = filtered.filter(m => m.folder_id === currentFolderId);
-      }
-      if (mediaFilterType === 'image') {
-        filtered = filtered.filter(m => m.resource_type === 'image');
-      } else if (mediaFilterType === 'video') {
-        filtered = filtered.filter(m => m.resource_type === 'video');
-      }
-      const images = filtered.filter(m => m.resource_type === 'image');
-      const videos = filtered.filter(m => m.resource_type === 'video');
+      if (currentFolderId === '__unfiled__') filtered = filtered.filter(m => !m.folder_id);
+      else if (currentFolderId) filtered = filtered.filter(m => m.folder_id == currentFolderId);
+      if (mediaFilterType === 'image') filtered = filtered.filter(m => m.mimetype && m.mimetype.startsWith('image'));
+      else if (mediaFilterType === 'video') filtered = filtered.filter(m => m.mimetype && m.mimetype.startsWith('video'));
+      const images = filtered.filter(m => m.mimetype && m.mimetype.startsWith('image'));
+      const videos = filtered.filter(m => m.mimetype && m.mimetype.startsWith('video'));
       renderMedia([...images, ...videos]);
     }
 
@@ -1080,80 +1105,44 @@
     });
 
     function getThumbnailUrl(file) {
-      if (file.resource_type === 'video' && file.public_id) {
-        return `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/so_1,f_jpg,w_400,h_300,c_fill/${file.public_id}.jpg`;
+      if (file.mimetype && file.mimetype.startsWith('video')) {
+        return 'data:image/svg+xml,...'; // placeholder video
       }
-      return file.url;
+      return API_BASE + (file.url || `/uploads/${file.filename}`);
     }
 
     // Selection logic
-    function clearSelection() {
-      selectedMediaIds.clear();
-      updateSelectionUI();
-      document.querySelectorAll('.media-card').forEach(card => card.classList.remove('selected'));
-    }
-
+    function clearSelection() { selectedMediaIds.clear(); updateSelectionUI(); document.querySelectorAll('.media-card').forEach(card => card.classList.remove('selected')); }
     function updateSelectionUI() {
       const count = selectedMediaIds.size;
-      if (count > 0) {
-        selectionBar.classList.remove('hidden');
-        selectionCount.textContent = `${count} đã chọn`;
-      } else {
-        selectionBar.classList.add('hidden');
-      }
+      if (count > 0) { selectionBar.classList.remove('hidden'); selectionCount.textContent = `${count} đã chọn`; }
+      else { selectionBar.classList.add('hidden'); }
     }
-
     function toggleSelectMedia(mediaId, cardElement) {
-      if (selectedMediaIds.has(mediaId)) {
-        selectedMediaIds.delete(mediaId);
-        cardElement.classList.remove('selected');
-      } else {
-        selectedMediaIds.add(mediaId);
-        cardElement.classList.add('selected');
-      }
+      if (selectedMediaIds.has(mediaId)) { selectedMediaIds.delete(mediaId); cardElement.classList.remove('selected'); }
+      else { selectedMediaIds.add(mediaId); cardElement.classList.add('selected'); }
       updateSelectionUI();
     }
-
     selectAllBtn.addEventListener('click', () => {
       const cards = document.querySelectorAll('.media-card');
       const visibleIds = Array.from(cards).map(c => c.dataset.mediaId).filter(Boolean);
       const allSelected = visibleIds.every(id => selectedMediaIds.has(id));
-      if (allSelected) {
-        visibleIds.forEach(id => selectedMediaIds.delete(id));
-        cards.forEach(c => c.classList.remove('selected'));
-      } else {
-        visibleIds.forEach(id => selectedMediaIds.add(id));
-        cards.forEach(c => c.classList.add('selected'));
-      }
+      if (allSelected) { visibleIds.forEach(id => selectedMediaIds.delete(id)); cards.forEach(c => c.classList.remove('selected')); }
+      else { visibleIds.forEach(id => selectedMediaIds.add(id)); cards.forEach(c => c.classList.add('selected')); }
       updateSelectionUI();
     });
-
     cancelSelectionBtn.addEventListener('click', clearSelection);
-
     moveSelectedBtn.addEventListener('click', async () => {
       const targetFolderId = moveToFolderSelect.value;
-      if (!targetFolderId) {
-        alert('Vui lòng chọn thư mục đích.');
-        return;
-      }
+      if (!targetFolderId) { alert('Vui lòng chọn thư mục đích.'); return; }
       if (selectedMediaIds.size === 0) return;
       const confirmed = await showConfirm(`Di chuyển ${selectedMediaIds.size} mục đã chọn đến thư mục này?`);
       if (!confirmed) return;
       const batch = db.batch();
       const mediaToMove = allMediaCache.filter(m => selectedMediaIds.has(m.id));
-      mediaToMove.forEach(m => {
-        batch.update(db.collection('users').doc(currentUser).collection('media').doc(m.id), { folder_id: targetFolderId });
-        m.folder_id = targetFolderId;
-      });
-      try {
-        await batch.commit();
-        clearSelection();
-        applyFilter();
-      } catch (e) {
-        alert('Lỗi: ' + e.message);
-      }
+      mediaToMove.forEach(m => { batch.update(db.collection('users').doc(currentUser).collection('media').doc(m.id), { folder_id: targetFolderId }); m.folder_id = targetFolderId; });
+      try { await batch.commit(); clearSelection(); applyFilter(); } catch (e) { alert('Lỗi: ' + e.message); }
     });
-
     deleteSelectedBtn.addEventListener('click', async () => {
       if (selectedMediaIds.size === 0) return;
       const confirmed = await showConfirm(`Xóa ${selectedMediaIds.size} mục đã chọn?`);
@@ -1162,101 +1151,61 @@
       const mediaToDelete = allMediaCache.filter(m => selectedMediaIds.has(m.id));
       for (const m of mediaToDelete) {
         batch.delete(db.collection('users').doc(currentUser).collection('media').doc(m.id));
-        if (m.public_id) {
-          try {
-            await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/delete_by_token`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token: m.public_id })
-            });
-          } catch (err) { console.error('Xóa Cloudinary thất bại:', err); }
-        }
+        try { await fetch(`${API_BASE}/api/media/${m.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${serverToken}` } }); } catch(e) {}
       }
-      try {
-        await batch.commit();
-        allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id));
-        clearSelection();
-        applyFilter();
-      } catch (e) {
-        alert('Lỗi: ' + e.message);
-      }
+      try { await batch.commit(); allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id)); clearSelection(); applyFilter(); } catch (e) { alert('Lỗi: ' + e.message); }
     });
 
-    // Upload
+    // Upload to VPS
     function buildFolderOptions(selectedId = '') {
       let opts = '<option value="">-- Chọn thư mục --</option>';
-      foldersCache.forEach(f => {
-        opts += `<option value="${f.id}" ${f.id === selectedId ? 'selected' : ''}>${f.name}</option>`;
-      });
+      foldersCache.forEach(f => { opts += `<option value="${f.id}" ${f.id === selectedId ? 'selected' : ''}>${f.name}</option>`; });
       opts += `<option value="__unfiled__" ${selectedId === '__unfiled__' ? 'selected' : ''}>📂 Chưa phân loại</option>`;
       return opts;
     }
 
     function renderFileList() {
       fileListContainer.innerHTML = '';
-      if (filesToUpload.length === 0) {
-        fileListContainer.innerHTML = '<p style="color:var(--text-secondary);">Chưa có file nào được chọn.</p>';
-        return;
-      }
+      if (filesToUpload.length === 0) { fileListContainer.innerHTML = '<p style="color:var(--text-secondary);">Chưa có file nào được chọn.</p>'; return; }
       const defaultFolder = defaultFolderSelect.value;
       filesToUpload.forEach((item, idx) => {
         const file = item.file;
-        const div = document.createElement('div');
-        div.className = 'file-list-item';
+        const div = document.createElement('div'); div.className = 'file-list-item';
         div.innerHTML = `
-          <div class="file-info">
-            <i class="far fa-file"></i>
-            <span>${file.name} (${(file.size/1024/1024).toFixed(1)} MB)</span>
-          </div>
-          <select class="file-folder-select" data-index="${idx}">
-            ${buildFolderOptions(item.folderId || defaultFolder)}
-          </select>
+          <div class="file-info"><i class="far fa-file"></i><span>${file.name} (${(file.size/1024/1024).toFixed(1)} MB)</span></div>
+          <select class="file-folder-select" data-index="${idx}">${buildFolderOptions(item.folderId || defaultFolder)}</select>
         `;
         fileListContainer.appendChild(div);
       });
-
       document.querySelectorAll('.file-folder-select').forEach(select => {
-        select.addEventListener('change', (e) => {
-          const idx = parseInt(select.dataset.index);
-          filesToUpload[idx].folderId = select.value || null;
-        });
+        select.addEventListener('change', (e) => { const idx = parseInt(select.dataset.index); filesToUpload[idx].folderId = select.value || null; });
       });
     }
 
     fileInput.addEventListener('change', () => {
       const newFiles = Array.from(fileInput.files);
       const defaultFolder = defaultFolderSelect.value;
-      newFiles.forEach(file => {
-        filesToUpload.push({ file, folderId: defaultFolder || null });
-      });
+      newFiles.forEach(file => { filesToUpload.push({ file, folderId: defaultFolder || null }); });
       renderFileList();
       fileInput.value = '';
     });
-
     defaultFolderSelect.addEventListener('change', () => {});
-
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor='var(--accent)'; });
     uploadZone.addEventListener('dragleave', () => uploadZone.style.borderColor='');
     uploadZone.addEventListener('drop', e => {
-      e.preventDefault();
-      uploadZone.style.borderColor='';
+      e.preventDefault(); uploadZone.style.borderColor='';
       if (e.dataTransfer.files.length) {
         const newFiles = Array.from(e.dataTransfer.files);
         const defaultFolder = defaultFolderSelect.value;
-        newFiles.forEach(file => {
-          filesToUpload.push({ file, folderId: defaultFolder || null });
-        });
+        newFiles.forEach(file => { filesToUpload.push({ file, folderId: defaultFolder || null }); });
         renderFileList();
       }
     });
 
     uploadAllBtn.addEventListener('click', async () => {
       if (!currentUser) return;
-      if (filesToUpload.length === 0) {
-        uploadStatus.textContent = 'Vui lòng chọn ít nhất một file.';
-        return;
-      }
+      if (filesToUpload.length === 0) { uploadStatus.textContent = 'Vui lòng chọn ít nhất một file.'; return; }
       uploadAllBtn.disabled = true;
       uploadStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chuẩn bị...';
       uploadProgress.style.width = '0%';
@@ -1271,25 +1220,34 @@
         uploadProgress.style.width = progressPercent + '%';
 
         const isDuplicate = allMediaCache.some(m => m.original_name === file.name && m.size === file.size);
-        if (isDuplicate) {
-          skipCount++;
-          continue;
-        }
+        if (isDuplicate) { skipCount++; continue; }
 
         uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Đang tải ${file.name} (${i+1}/${total})`;
 
         try {
-          const result = await uploadFileToCloudinary(file, (pct) => {
-            uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${file.name} - ${pct}%`;
-          });
-          await db.collection('users').doc(currentUser).collection('media').add({
-            url: result.secure_url,
-            public_id: result.public_id,
-            resource_type: result.resource_type || (file.type.startsWith('video/') ? 'video' : 'image'),
-            original_name: file.name,
-            size: result.bytes,
-            folder_id: folderId,
-            created_at: firebase.firestore.FieldValue.serverTimestamp()
+          const formData = new FormData();
+          formData.append('media', file);
+          if (folderId) formData.append('folder_id', folderId);
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `${API_BASE}/api/upload`);
+          xhr.setRequestHeader('Authorization', `Bearer ${serverToken}`);
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${file.name} - ${pct}%`;
+            }
+          };
+          await new Promise((resolve, reject) => {
+            xhr.onload = () => {
+              if (xhr.status === 200) {
+                const res = JSON.parse(xhr.responseText);
+                resolve(res);
+              } else {
+                reject(new Error(xhr.statusText));
+              }
+            };
+            xhr.onerror = () => reject(new Error('Lỗi kết nối'));
+            xhr.send(formData);
           });
           successCount++;
         } catch (e) {
@@ -1305,50 +1263,17 @@
       if (skipCount > 0) msg += `⏭️ Bỏ qua trùng: ${skipCount}.`;
       uploadStatus.innerHTML = msg || 'Không có tệp nào được tải.';
       uploadAllBtn.disabled = false;
-      filesToUpload = [];
-      renderFileList();
-      await loadAllMedia();
-      applyFilter();
-      showRandomMedia();
-      loadFolders();
+      filesToUpload = []; renderFileList();
+      await loadAllMedia(); applyFilter(); showRandomMedia(); loadFolders();
     });
-
-    function uploadFileToCloudinary(file, onProgress) {
-      return new Promise((resolve, reject) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', UPLOAD_PRESET);
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`);
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const pct = Math.round((e.loaded / e.total) * 100);
-            if (onProgress) onProgress(pct);
-          }
-        };
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            resolve(JSON.parse(xhr.responseText));
-          } else {
-            reject(new Error('Upload thất bại: ' + xhr.statusText));
-          }
-        };
-        xhr.onerror = () => reject(new Error('Lỗi kết nối'));
-        xhr.send(formData);
-      });
-    }
 
     // Render media
     function renderMedia(files) {
       mediaGallery.innerHTML = '';
-      if(!files.length) {
-        mediaGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Trống</p></div>';
-        updateSelectionUI();
-        return;
-      }
+      if(!files.length) { mediaGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Trống</p></div>'; updateSelectionUI(); return; }
       const frag = document.createDocumentFragment();
       files.forEach((file, index) => {
-        const isVideo = file.resource_type === 'video';
+        const isVideo = file.mimetype && file.mimetype.startsWith('video');
         const card = document.createElement('div');
         card.className = 'media-card' + (isVideo ? ' video-thumb' : ' image-thumb');
         if (selectedMediaIds.has(file.id)) card.classList.add('selected');
@@ -1359,41 +1284,21 @@
         img.loading = 'lazy';
         img.onerror = () => { img.src = 'data:image/svg+xml,...'; };
         card.appendChild(img);
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'select-checkbox';
-        checkbox.checked = selectedMediaIds.has(file.id);
-        checkbox.addEventListener('click', (e) => {
-          e.stopPropagation();
-          toggleSelectMedia(file.id, card);
-        });
+        const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.className = 'select-checkbox'; checkbox.checked = selectedMediaIds.has(file.id);
+        checkbox.addEventListener('click', (e) => { e.stopPropagation(); toggleSelectMedia(file.id, card); });
         card.appendChild(checkbox);
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'delete-btn';
-        delBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        const delBtn = document.createElement('button'); delBtn.className = 'delete-btn'; delBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
         delBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const confirmed = await showConfirm('Xóa ảnh/video này?');
           if (!confirmed) return;
-          if(file.public_id) fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/delete_by_token`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: file.public_id }) });
-          db.collection('users').doc(currentUser).collection('media').doc(file.id).delete();
-          allMediaCache = allMediaCache.filter(m => m.id !== file.id);
-          selectedMediaIds.delete(file.id);
-          applyFilter();
+          try { await fetch(`${API_BASE}/api/media/${file.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${serverToken}` } }); } catch(e) {}
+          allMediaCache = allMediaCache.filter(m => m.id !== file.id); selectedMediaIds.delete(file.id); applyFilter();
         });
         card.appendChild(delBtn);
-
-        const typeIcon = document.createElement('div');
-        typeIcon.className = 'media-type-icon';
-        typeIcon.innerHTML = isVideo ? '<i class="fas fa-play"></i>' : '';
+        const typeIcon = document.createElement('div'); typeIcon.className = 'media-type-icon'; typeIcon.innerHTML = isVideo ? '<i class="fas fa-play"></i>' : '';
         card.appendChild(typeIcon);
-
-        card.addEventListener('click', (e) => {
-          if (e.target.tagName === 'INPUT') return;
-          openViewer(files, index);
-        });
+        card.addEventListener('click', (e) => { if (e.target.tagName === 'INPUT') return; openViewer(files, index); });
         frag.appendChild(card);
       });
       mediaGallery.appendChild(frag);
@@ -1402,54 +1307,23 @@
 
     // Viewer
     let viewerFiles = [], viewerIndex = 0;
-
-    function openViewer(files, index) {
-      viewerFiles = files;
-      viewerIndex = index;
-      viewerOverlay.classList.add('active');
-      updateViewer();
-    }
-
-    function closeViewer() {
-      viewerOverlay.classList.remove('active');
-      viewerContent.innerHTML = '';
-    }
-
+    function openViewer(files, index) { viewerFiles = files; viewerIndex = index; viewerOverlay.classList.add('active'); updateViewer(); }
+    function closeViewer() { viewerOverlay.classList.remove('active'); viewerContent.innerHTML = ''; }
     viewerCloseBtn.addEventListener('click', closeViewer);
-    viewerOverlay.addEventListener('click', (e) => {
-      if (e.target === viewerOverlay) closeViewer();
-    });
-    viewerContent.addEventListener('click', (e) => {
-      if (e.target === viewerContent) closeViewer();
-    });
-
+    viewerOverlay.addEventListener('click', (e) => { if (e.target === viewerOverlay) closeViewer(); });
+    viewerContent.addEventListener('click', (e) => { if (e.target === viewerContent) closeViewer(); });
     function updateViewer() {
-      const file = viewerFiles[viewerIndex];
-      viewerContent.innerHTML = '';
-      const isVideo = file.resource_type === 'video';
+      const file = viewerFiles[viewerIndex]; viewerContent.innerHTML = '';
+      const isVideo = file.mimetype && file.mimetype.startsWith('video');
       let media;
-      if (isVideo) {
-        media = document.createElement('video');
-        media.src = file.url;
-        media.controls = true;
-        media.autoplay = true;
-        media.playsInline = true;
-      } else {
-        media = document.createElement('img');
-        media.src = file.url;
-      }
-      media.className = 'viewer-media';
-      media.setAttribute('draggable', 'false');
+      if (isVideo) { media = document.createElement('video'); media.src = API_BASE + (file.url || `/uploads/${file.filename}`); media.controls = true; media.autoplay = true; media.playsInline = true; }
+      else { media = document.createElement('img'); media.src = API_BASE + (file.url || `/uploads/${file.filename}`); }
+      media.className = 'viewer-media'; media.setAttribute('draggable', 'false');
       viewerContent.appendChild(media);
       viewerCounter.textContent = `${viewerIndex+1}/${viewerFiles.length}`;
     }
-
-    viewerPrev.addEventListener('click', () => {
-      if (viewerIndex > 0) { viewerIndex--; updateViewer(); }
-    });
-    viewerNext.addEventListener('click', () => {
-      if (viewerIndex < viewerFiles.length-1) { viewerIndex++; updateViewer(); }
-    });
+    viewerPrev.addEventListener('click', () => { if(viewerIndex>0) { viewerIndex--; updateViewer(); } });
+    viewerNext.addEventListener('click', () => { if(viewerIndex<viewerFiles.length-1) { viewerIndex++; updateViewer(); } });
     document.addEventListener('keydown', e => {
       if(viewerOverlay.classList.contains('active')) {
         if(e.key === 'ArrowLeft') viewerPrev.click();
