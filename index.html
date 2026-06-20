@@ -180,7 +180,7 @@
     }
     .upload-zone:hover { border-color: var(--accent); }
 
-    .filter-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .filter-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
     .filter-tab {
       padding: 0.4rem 1rem; border-radius: 2rem;
       background: rgba(255,255,255,0.05); cursor: pointer;
@@ -412,6 +412,8 @@
           <span class="filter-tab active" data-type="all">Tất cả</span>
           <span class="filter-tab" data-type="image">🖼️ Ảnh</span>
           <span class="filter-tab" data-type="video">🎬 Video</span>
+          <!-- Nút kiểm tra trùng luôn hiển thị -->
+          <button class="btn outline" id="checkDuplicateBtnPermanent" style="margin-left:auto;" title="Quét file trùng lặp"><i class="fas fa-search"></i> Kiểm tra trùng</button>
         </div>
         <div id="selectionBar" class="selection-bar hidden">
           <span id="selectionCount">0 đã chọn</span>
@@ -421,7 +423,7 @@
               <option value="">-- Chọn thư mục --</option>
             </select>
             <button class="btn" id="moveSelectedBtn"><i class="fas fa-arrow-right"></i> Di chuyển</button>
-            <button class="btn danger" id="deleteSelectedBtn"><i class="fas fa-trash-alt"></i> Xóa</button>
+            <button class="btn danger" id="deleteSelectedBtn"><i class="fas fa-trash-alt"></i> Xóa đã chọn</button>
             <button class="btn outline" id="cancelSelectionBtn"><i class="fas fa-times"></i> Hủy</button>
           </div>
         </div>
@@ -638,21 +640,12 @@
       return groups;
     }
 
-    const checkDuplicateBtn = document.createElement('button');
-    checkDuplicateBtn.className = 'btn outline';
-    checkDuplicateBtn.innerHTML = '<i class="fas fa-search"></i> Kiểm tra trùng';
-    checkDuplicateBtn.addEventListener('click', () => {
+    // Nút kiểm tra trùng cố định (đã có trong HTML)
+    const checkDuplicateBtnPermanent = $('#checkDuplicateBtnPermanent');
+    checkDuplicateBtnPermanent.addEventListener('click', () => {
       const groups = findDuplicates(allMediaCache);
       showDuplicateModal(groups);
     });
-
-    setTimeout(() => {
-      const actionsDiv = document.querySelector('#selectionBar .actions');
-      if (actionsDiv && !document.getElementById('checkDuplicateBtn')) {
-        checkDuplicateBtn.id = 'checkDuplicateBtn';
-        actionsDiv.appendChild(checkDuplicateBtn);
-      }
-    }, 500);
 
     // Auth
     const authPage = $('#authPage'), appMain = $('#appMain');
@@ -1089,7 +1082,7 @@
         });
         if (res.ok) {
           const data = await res.json();
-          allMediaCache = (data.files || []).filter(f => f.original_name && f.size); // loại bỏ object lỗi
+          allMediaCache = (data.files || []).filter(f => f.original_name && f.size);
         }
       } catch (e) {
         console.error('Lỗi tải media:', e);
@@ -1148,40 +1141,40 @@
       mediaToMove.forEach(m => { batch.update(db.collection('users').doc(currentUser).collection('media').doc(m.id), { folder_id: targetFolderId }); m.folder_id = targetFolderId; });
       try { await batch.commit(); clearSelection(); applyFilter(); } catch (e) { alert('Lỗi: ' + e.message); }
     });
+    
+    // Nút xóa đã chọn (đã sửa)
     deleteSelectedBtn.addEventListener('click', async () => {
-  if (selectedMediaIds.size === 0) {
-    alert('Vui lòng chọn ít nhất một mục để xóa.');
-    return;
-  }
-  const confirmed = await showConfirm(`Xóa ${selectedMediaIds.size} mục đã chọn?`);
-  if (!confirmed) return;
+      if (selectedMediaIds.size === 0) {
+        alert('Vui lòng chọn ít nhất một mục để xóa.');
+        return;
+      }
+      const confirmed = await showConfirm(`Xóa ${selectedMediaIds.size} mục đã chọn?`);
+      if (!confirmed) return;
 
-  const batch = db.batch();
-  const mediaToDelete = allMediaCache.filter(m => selectedMediaIds.has(m.id));
-  
-  // Hiển thị trạng thái đang xóa (có thể thêm spinner, nhưng tạm thời dùng alert)
-  for (const m of mediaToDelete) {
-    batch.delete(db.collection('users').doc(currentUser).collection('media').doc(m.id));
-    try {
-      await fetch(`${API_BASE}/api/media/${m.id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${serverToken}` }
-      });
-    } catch(e) {
-      console.error('Lỗi xóa file trên VPS:', e);
-    }
-  }
-  
-  try {
-    await batch.commit();
-    // Xóa khỏi cache local
-    allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id));
-    clearSelection();
-    applyFilter();
-  } catch (e) {
-    alert('Lỗi khi xóa: ' + e.message);
-  }
-});
+      const batch = db.batch();
+      const mediaToDelete = allMediaCache.filter(m => selectedMediaIds.has(m.id));
+      
+      for (const m of mediaToDelete) {
+        batch.delete(db.collection('users').doc(currentUser).collection('media').doc(m.id));
+        try {
+          await fetch(`${API_BASE}/api/media/${m.id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${serverToken}` }
+          });
+        } catch(e) {
+          console.error('Lỗi xóa file trên VPS:', e);
+        }
+      }
+      
+      try {
+        await batch.commit();
+        allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id));
+        clearSelection();
+        applyFilter();
+      } catch (e) {
+        alert('Lỗi khi xóa: ' + e.message);
+      }
+    });
 
     // Upload
     function buildFolderOptions(selectedId = '') {
@@ -1209,7 +1202,6 @@
       });
     }
 
-    // Hàm kiểm tra trùng CHỈ dựa vào allMediaCache (file đã upload trên server)
     function isDuplicateFile(file) {
       return allMediaCache.some(m => m.original_name === file.name && m.size === file.size);
     }
@@ -1274,7 +1266,6 @@
         const progressPercent = Math.round((i / total) * 100);
         uploadProgress.style.width = progressPercent + '%';
 
-        // Kiểm tra lần cuối trước khi upload
         if (isDuplicateFile(file)) { skipCount++; continue; }
 
         uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Đang tải ${file.name} (${i+1}/${total})`;
@@ -1309,7 +1300,7 @@
             xhr.onerror = () => reject(new Error('Lỗi kết nối'));
             xhr.send(formData);
           });
-          // Thêm ngay vào cache để lần sau không bị coi là trùng
+          // Thêm vào cache
           allMediaCache.push({
             id: result.id,
             url: result.url,
@@ -1335,7 +1326,6 @@
       uploadStatus.innerHTML = msg || 'Không có tệp nào được tải.';
       uploadAllBtn.disabled = false;
       filesToUpload = []; renderFileList();
-      // Cập nhật lại từ server để đồng bộ (giữ cache đã thêm)
       await loadAllMedia();
       applyFilter();
       showRandomMedia();
