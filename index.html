@@ -444,7 +444,7 @@
           <i class="fas fa-cloud-upload-alt fa-2x"></i>
           <div>Nhấn để chọn nhiều ảnh / video</div>
           <div style="font-size:0.8rem; margin-top:0.5rem; color:var(--text-secondary);">
-            Sau đó chọn thư mục cho từng file.
+            File trùng với server sẽ tự động bị bỏ qua.
           </div>
         </div>
         <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none;">
@@ -496,7 +496,6 @@
       return;
     }
 
-    // ===== CẤU HÌNH VPS =====
     const API_BASE = 'https://xyzweb.ddns.net';
 
     firebase.initializeApp({
@@ -744,7 +743,6 @@
     sidebarCloseMobile.addEventListener('click', () => sidebar.classList.remove('open'));
     $('#mainContent').addEventListener('click', () => { if (window.innerWidth <= 768) sidebar.classList.remove('open'); });
 
-    // API call helper
     async function apiCall(url, options = {}) {
       const headers = options.headers || {};
       if (serverToken) headers['Authorization'] = `Bearer ${serverToken}`;
@@ -759,7 +757,6 @@
       return res.json();
     }
 
-    // Auth functions
     showRegister.onclick = () => { loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
     showLogin.onclick = () => { registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
 
@@ -873,7 +870,6 @@
     }
     $$('.nav-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
 
-    // Random media
     function showRandomMedia() {
       if (!allMediaCache.length) {
         randomGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Chưa có media nào.</p></div>';
@@ -905,54 +901,16 @@
       applyFilter();
     }
 
-    // === Hàm tạo thumbnail cho video ===
-    function createVideoThumbnail(videoUrl) {
-      return new Promise((resolve, reject) => {
-        const video = document.createElement('video');
-        video.crossOrigin = 'anonymous';
-        video.preload = 'metadata';
-        video.muted = true;
-        video.playsInline = true;
-        
-        const cleanup = () => {
-          video.removeEventListener('loadeddata', onLoaded);
-          video.removeEventListener('error', onError);
-        };
-
-        const onLoaded = () => {
-          video.currentTime = 0.1; // seek đến 0.1 giây
-        };
-
-        const onSeeked = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 320;
-            canvas.height = 180;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            cleanup();
-            video.removeEventListener('seeked', onSeeked);
-            resolve(dataUrl);
-          } catch (e) {
-            cleanup();
-            video.removeEventListener('seeked', onSeeked);
-            reject(e);
-          }
-        };
-
-        const onError = () => {
-          cleanup();
-          video.removeEventListener('seeked', onSeeked);
-          reject(new Error('Không thể tải video'));
-        };
-
-        video.addEventListener('loadeddata', onLoaded);
-        video.addEventListener('seeked', onSeeked);
-        video.addEventListener('error', onError);
-        video.src = videoUrl;
-        video.load();
-      });
+    function getThumbnailUrl(file) {
+      if (file.mimetype && file.mimetype.startsWith('video')) {
+        return file.thumbnail_url ? API_BASE + file.thumbnail_url : 'data:image/svg+xml,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+            <rect width="640" height="360" fill="#1e2538" rx="10"/>
+            <polygon points="260,120 260,240 400,180" fill="#4f8cff"/>
+          </svg>
+        `);
+      }
+      return API_BASE + (file.url || `/uploads/${file.filename}`);
     }
 
     function renderRandomMedia(files) {
@@ -965,22 +923,7 @@
         const img = document.createElement('img');
         img.alt = file.original_name || '';
         img.loading = 'lazy';
-        // Ban đầu dùng placeholder cho video, ảnh dùng URL thật
-        if (isVideo) {
-          img.src = 'data:image/svg+xml,' + encodeURIComponent(`
-            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-              <rect width="200" height="200" fill="#1e2538" rx="10"/>
-              <polygon points="70,50 70,150 150,100" fill="#4f8cff"/>
-            </svg>
-          `);
-          // Tạo thumbnail thật
-          const videoUrl = API_BASE + (file.url || `/uploads/${file.filename}`);
-          createVideoThumbnail(videoUrl).then(dataUrl => {
-            img.src = dataUrl;
-          }).catch(() => {}); // fallback giữ placeholder
-        } else {
-          img.src = API_BASE + (file.url || `/uploads/${file.filename}`);
-        }
+        img.src = getThumbnailUrl(file);
         img.onerror = () => {
           img.src = 'data:image/svg+xml,' + encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
@@ -1013,7 +956,6 @@
       showRandomMedia();
     });
 
-    // Folders
     async function loadFolders() {
       const snap = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
       foldersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1147,7 +1089,7 @@
         });
         if (res.ok) {
           const data = await res.json();
-          allMediaCache = data.files || [];
+          allMediaCache = (data.files || []).filter(f => f.original_name && f.size); // loại bỏ object lỗi
         }
       } catch (e) {
         console.error('Lỗi tải media:', e);
@@ -1175,20 +1117,6 @@
       });
     });
 
-    function getThumbnailUrl(file) {
-      if (file.mimetype && file.mimetype.startsWith('video')) {
-        // Trả về placeholder, sẽ được thay thế bất đồng bộ
-        return 'data:image/svg+xml,' + encodeURIComponent(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-            <rect width="200" height="200" fill="#1e2538" rx="10"/>
-            <polygon points="70,50 70,150 150,100" fill="#4f8cff"/>
-          </svg>
-        `);
-      }
-      return API_BASE + (file.url || `/uploads/${file.filename}`);
-    }
-
-    // Selection logic
     function clearSelection() { selectedMediaIds.clear(); updateSelectionUI(); document.querySelectorAll('.media-card').forEach(card => card.classList.remove('selected')); }
     function updateSelectionUI() {
       const count = selectedMediaIds.size;
@@ -1221,19 +1149,41 @@
       try { await batch.commit(); clearSelection(); applyFilter(); } catch (e) { alert('Lỗi: ' + e.message); }
     });
     deleteSelectedBtn.addEventListener('click', async () => {
-      if (selectedMediaIds.size === 0) return;
-      const confirmed = await showConfirm(`Xóa ${selectedMediaIds.size} mục đã chọn?`);
-      if (!confirmed) return;
-      const batch = db.batch();
-      const mediaToDelete = allMediaCache.filter(m => selectedMediaIds.has(m.id));
-      for (const m of mediaToDelete) {
-        batch.delete(db.collection('users').doc(currentUser).collection('media').doc(m.id));
-        try { await fetch(`${API_BASE}/api/media/${m.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${serverToken}` } }); } catch(e) {}
-      }
-      try { await batch.commit(); allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id)); clearSelection(); applyFilter(); } catch (e) { alert('Lỗi: ' + e.message); }
-    });
+  if (selectedMediaIds.size === 0) {
+    alert('Vui lòng chọn ít nhất một mục để xóa.');
+    return;
+  }
+  const confirmed = await showConfirm(`Xóa ${selectedMediaIds.size} mục đã chọn?`);
+  if (!confirmed) return;
 
-    // Upload to VPS
+  const batch = db.batch();
+  const mediaToDelete = allMediaCache.filter(m => selectedMediaIds.has(m.id));
+  
+  // Hiển thị trạng thái đang xóa (có thể thêm spinner, nhưng tạm thời dùng alert)
+  for (const m of mediaToDelete) {
+    batch.delete(db.collection('users').doc(currentUser).collection('media').doc(m.id));
+    try {
+      await fetch(`${API_BASE}/api/media/${m.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${serverToken}` }
+      });
+    } catch(e) {
+      console.error('Lỗi xóa file trên VPS:', e);
+    }
+  }
+  
+  try {
+    await batch.commit();
+    // Xóa khỏi cache local
+    allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id));
+    clearSelection();
+    applyFilter();
+  } catch (e) {
+    alert('Lỗi khi xóa: ' + e.message);
+  }
+});
+
+    // Upload
     function buildFolderOptions(selectedId = '') {
       let opts = '<option value="">-- Chọn thư mục --</option>';
       foldersCache.forEach(f => { opts += `<option value="${f.id}" ${f.id === selectedId ? 'selected' : ''}>${f.name}</option>`; });
@@ -1259,13 +1209,30 @@
       });
     }
 
+    // Hàm kiểm tra trùng CHỈ dựa vào allMediaCache (file đã upload trên server)
+    function isDuplicateFile(file) {
+      return allMediaCache.some(m => m.original_name === file.name && m.size === file.size);
+    }
+
     fileInput.addEventListener('change', () => {
       const newFiles = Array.from(fileInput.files);
       const defaultFolder = defaultFolderSelect.value;
-      newFiles.forEach(file => { filesToUpload.push({ file, folderId: defaultFolder || null }); });
+      let addedCount = 0, skippedCount = 0;
+      newFiles.forEach(file => {
+        if (isDuplicateFile(file)) {
+          skippedCount++;
+        } else {
+          filesToUpload.push({ file, folderId: defaultFolder || null });
+          addedCount++;
+        }
+      });
       renderFileList();
+      if (skippedCount > 0) {
+        uploadStatus.innerHTML = `⏭️ Đã bỏ qua ${skippedCount} file đã tồn tại trên server.`;
+      }
       fileInput.value = '';
     });
+
     defaultFolderSelect.addEventListener('change', () => {});
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor='var(--accent)'; });
@@ -1275,8 +1242,19 @@
       if (e.dataTransfer.files.length) {
         const newFiles = Array.from(e.dataTransfer.files);
         const defaultFolder = defaultFolderSelect.value;
-        newFiles.forEach(file => { filesToUpload.push({ file, folderId: defaultFolder || null }); });
+        let addedCount = 0, skippedCount = 0;
+        newFiles.forEach(file => {
+          if (isDuplicateFile(file)) {
+            skippedCount++;
+          } else {
+            filesToUpload.push({ file, folderId: defaultFolder || null });
+            addedCount++;
+          }
+        });
         renderFileList();
+        if (skippedCount > 0) {
+          uploadStatus.innerHTML = `⏭️ Đã bỏ qua ${skippedCount} file đã tồn tại trên server.`;
+        }
       }
     });
 
@@ -1296,8 +1274,8 @@
         const progressPercent = Math.round((i / total) * 100);
         uploadProgress.style.width = progressPercent + '%';
 
-        const isDuplicate = allMediaCache.some(m => m.original_name === file.name && m.size === file.size);
-        if (isDuplicate) { skipCount++; continue; }
+        // Kiểm tra lần cuối trước khi upload
+        if (isDuplicateFile(file)) { skipCount++; continue; }
 
         uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Đang tải ${file.name} (${i+1}/${total})`;
 
@@ -1314,7 +1292,7 @@
               uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${file.name} - ${pct}%`;
             }
           };
-          await new Promise((resolve, reject) => {
+          const result = await new Promise((resolve, reject) => {
             xhr.onload = () => {
               if (xhr.status === 200 || xhr.status === 201) {
                 const res = JSON.parse(xhr.responseText);
@@ -1331,6 +1309,17 @@
             xhr.onerror = () => reject(new Error('Lỗi kết nối'));
             xhr.send(formData);
           });
+          // Thêm ngay vào cache để lần sau không bị coi là trùng
+          allMediaCache.push({
+            id: result.id,
+            url: result.url,
+            thumbnail_url: result.thumbnail_url,
+            original_name: result.original_name,
+            size: result.size,
+            mimetype: result.mimetype,
+            folder_id: result.folder_id,
+            resource_type: result.mimetype && result.mimetype.startsWith('video') ? 'video' : 'image'
+          });
           successCount++;
         } catch (e) {
           uploadStatus.innerHTML = `<i class="fas fa-times-circle"></i> Lỗi upload ${file.name}: ${e.message}`;
@@ -1346,10 +1335,13 @@
       uploadStatus.innerHTML = msg || 'Không có tệp nào được tải.';
       uploadAllBtn.disabled = false;
       filesToUpload = []; renderFileList();
-      await loadAllMedia(); applyFilter(); showRandomMedia(); loadFolders();
+      // Cập nhật lại từ server để đồng bộ (giữ cache đã thêm)
+      await loadAllMedia();
+      applyFilter();
+      showRandomMedia();
+      loadFolders();
     });
 
-    // Render media
     function renderMedia(files) {
       mediaGallery.innerHTML = '';
       if(!files.length) { mediaGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Trống</p></div>'; updateSelectionUI(); return; }
@@ -1363,15 +1355,7 @@
         const img = document.createElement('img');
         img.alt = file.original_name || '';
         img.loading = 'lazy';
-        if (isVideo) {
-          img.src = getThumbnailUrl(file); // placeholder
-          const videoUrl = API_BASE + (file.url || `/uploads/${file.filename}`);
-          createVideoThumbnail(videoUrl).then(dataUrl => {
-            img.src = dataUrl;
-          }).catch(() => {});
-        } else {
-          img.src = getThumbnailUrl(file);
-        }
+        img.src = getThumbnailUrl(file);
         img.onerror = () => {
           img.src = 'data:image/svg+xml,' + encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
@@ -1413,8 +1397,16 @@
       const file = viewerFiles[viewerIndex]; viewerContent.innerHTML = '';
       const isVideo = file.mimetype && file.mimetype.startsWith('video');
       let media;
-      if (isVideo) { media = document.createElement('video'); media.src = API_BASE + (file.url || `/uploads/${file.filename}`); media.controls = true; media.autoplay = true; media.playsInline = true; }
-      else { media = document.createElement('img'); media.src = API_BASE + (file.url || `/uploads/${file.filename}`); }
+      if (isVideo) {
+        media = document.createElement('video');
+        media.src = API_BASE + (file.url || `/uploads/${file.filename}`);
+        media.controls = true;
+        media.preload = 'metadata';
+        media.playsInline = true;
+      } else {
+        media = document.createElement('img');
+        media.src = API_BASE + (file.url || `/uploads/${file.filename}`);
+      }
       media.className = 'viewer-media'; media.setAttribute('draggable', 'false');
       viewerContent.appendChild(media);
       viewerCounter.textContent = `${viewerIndex+1}/${viewerFiles.length}`;
