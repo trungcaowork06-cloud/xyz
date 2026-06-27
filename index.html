@@ -6,6 +6,7 @@
   <title>📁 Vault - Kho lưu trữ cá nhân</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
+    /* Toàn bộ CSS giữ nguyên như các phiên bản trước */
     * { margin:0; padding:0; box-sizing:border-box; }
     :root {
       --bg-primary: #0b0f19;
@@ -305,12 +306,24 @@
       cursor: pointer; z-index: 4; font-size: 0.8rem;
     }
     .folder-link-btn:hover { background: var(--accent); }
+
+    /* Style cho select số lượng random */
+    .random-count-select {
+      padding: 0.5rem 0.8rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      color: white;
+      font-size: 0.9rem;
+      margin-left: 0.5rem;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 <div class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></div>
 
-<!-- Auth Page -->
+<!-- Auth Page (giữ nguyên) -->
 <div id="authPage" class="auth-container">
   <div class="auth-box" id="loginForm">
     <h2><i class="fas fa-lock"></i> Đăng nhập</h2>
@@ -386,6 +399,7 @@
 
     <main class="main-content" id="mainContent">
       <div id="page-library" class="page active">
+        <!-- Nội dung trang thư viện giữ nguyên như trước -->
         <h2 id="libraryTitle"><i class="fas fa-photo-video"></i> Tất cả</h2>
         <div id="statsBar" class="stats-bar">
           <span>📁 Tổng: <strong id="statTotalFiles">0</strong> file</span>
@@ -418,6 +432,7 @@
       </div>
 
       <div id="page-upload" class="page">
+        <!-- Nội dung trang upload giữ nguyên -->
         <h2><i class="fas fa-cloud-upload-alt"></i> Tải lên</h2>
         <div style="margin:1rem 0;">
           <label style="font-weight:600; display:block; margin-bottom:0.5rem;">📁 Thư mục mặc định</label>
@@ -442,9 +457,19 @@
       </div>
 
       <div id="page-random" class="page">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
-          <h2 id="randomTitle"><i class="fas fa-random"></i> Ngẫu nhiên (10 video/ảnh)</h2>
-          <button class="btn outline" id="refreshRandomBtn"><i class="fas fa-sync-alt"></i> Làm mới</button>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h2 id="randomTitle"><i class="fas fa-random"></i> Ngẫu nhiên</h2>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <label style="color:var(--text-secondary); font-size:0.9rem;">Số lượng:</label>
+            <select id="randomCountSelect" class="random-count-select">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="30" selected>30</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <button class="btn outline" id="refreshRandomBtn"><i class="fas fa-sync-alt"></i> Làm mới</button>
+          </div>
         </div>
         <div class="gallery" id="randomGallery"></div>
       </div>
@@ -469,8 +494,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
-
 <script>
   (() => {
     if (location.protocol === 'file:') {
@@ -512,7 +535,7 @@
     confirmYes.addEventListener('click', () => hideConfirm(true));
     confirmNo.addEventListener('click', () => hideConfirm(false));
 
-    // Duplicate modal
+    // Duplicate modal (giữ nguyên)
     const duplicateModal = $('#duplicateModal'), duplicateInfo = $('#duplicateInfo');
     const duplicateList = $('#duplicateList'), deleteDuplicatesBtn = $('#deleteDuplicatesBtn');
     const closeDuplicateModal = $('#closeDuplicateModal');
@@ -605,6 +628,7 @@
     const folderList = $('#folderList'), folderTabsDesktop = $('#folderTabsDesktop'), folderSelectMobile = $('#folderSelectMobile');
     const mediaGallery = $('#mediaGallery'), libraryTitle = $('#libraryTitle');
     const randomGallery = $('#randomGallery'), refreshRandomBtn = $('#refreshRandomBtn');
+    const randomCountSelect = $('#randomCountSelect');
     const newFolderName = $('#newFolderName'), createFolderBtn = $('#createFolderBtn');
     const viewerOverlay = $('#viewerOverlay'), viewerContent = $('#viewerContent'), viewerCloseBtn = $('#viewerClose');
     const viewerPrev = $('#viewerPrev'), viewerNext = $('#viewerNext'), viewerCounter = $('#viewerCounter');
@@ -623,10 +647,10 @@
     const uploadAllBtn = $('#uploadAllBtn'), uploadStatus = $('#uploadStatus'), uploadProgress = $('#uploadProgress');
     let filesToUpload = [];
 
-    // Stats elements
+    // Stats
     const statTotalFiles = $('#statTotalFiles'), statImages = $('#statImages'), statVideos = $('#statVideos'), statSize = $('#statSize');
 
-    // Rubber band selection
+    // Rubber band selection (giữ nguyên)
     let isDragging = false, dragStartX, dragStartY;
     mediaGallery.addEventListener('mousedown', (e) => {
       if (e.target === mediaGallery || e.target.classList.contains('gallery')) {
@@ -779,18 +803,52 @@
       } catch(e) { console.error('Lỗi tải thống kê:', e); }
     }
 
-    // Random
-    function showRandomMedia() {
-      if (!allMediaCache.length) { randomGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Chưa có media.</p></div>'; return; }
-      const videos = allMediaCache.filter(m => m.resource_type === 'video');
-      const images = allMediaCache.filter(m => m.resource_type === 'image');
-      let pool = [...videos];
-      if (pool.length < 10) {
-        const shuffledImages = [...images].sort(() => Math.random() - 0.5);
-        pool = pool.concat(shuffledImages.slice(0, 10 - pool.length));
+    // ====== Hàm Random mới ======
+    function getRandomItems(count = 10) {
+      // Nhóm media theo folder_id (null hoặc undefined coi là folder "unfiled")
+      const folderMap = new Map();
+      allMediaCache.forEach(m => {
+        const folderKey = m.folder_id || '__unfiled__';
+        if (!folderMap.has(folderKey)) folderMap.set(folderKey, []);
+        folderMap.get(folderKey).push(m);
+      });
+
+      // Từ mỗi folder lấy tối đa 2 media
+      let candidates = [];
+      folderMap.forEach(mediaList => {
+        const shuffled = [...mediaList].sort(() => Math.random() - 0.5);
+        candidates.push(...shuffled.slice(0, 2));
+      });
+
+      // Trộn toàn bộ candidates
+      candidates = candidates.sort(() => Math.random() - 0.5);
+
+      // Nếu số lượng yêu cầu ít hơn candidates, cắt bớt
+      if (count <= candidates.length) {
+        return candidates.slice(0, count);
       }
-      const shuffled = [...pool].sort(() => Math.random() - 0.5);
-      renderRandomMedia(shuffled.slice(0, Math.min(10, shuffled.length)));
+
+      // Nếu thiếu, lấy thêm từ pool gốc (bỏ qua giới hạn folder)
+      const remaining = [...allMediaCache].sort(() => Math.random() - 0.5);
+      const existingIds = new Set(candidates.map(m => m.id));
+      for (const m of remaining) {
+        if (candidates.length >= count) break;
+        if (!existingIds.has(m.id)) {
+          candidates.push(m);
+          existingIds.add(m.id);
+        }
+      }
+      return candidates;
+    }
+
+    function showRandomMedia() {
+      const count = parseInt(randomCountSelect.value) || 10;
+      if (!allMediaCache.length) {
+        randomGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Chưa có media.</p></div>';
+        return;
+      }
+      const selected = getRandomItems(count);
+      renderRandomMedia(selected);
     }
 
     function getThumbnailUrl(file) {
@@ -1024,7 +1082,7 @@
       try { await batch.commit(); allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id)); clearSelection(); applyFilter(); loadStats(); } catch(e) { alert('Lỗi: '+e.message); }
     });
 
-    // Upload
+    // Upload (giữ nguyên)
     function buildFolderOptions(selectedId = '') {
       let opts = '<option value="">-- Chọn --</option>';
       foldersCache.forEach(f => opts += `<option value="${f.id}" ${f.id===selectedId?'selected':''}>${f.name}</option>`);
@@ -1180,7 +1238,7 @@
       updateSelectionUI();
     }
 
-    // Viewer
+    // Viewer (giữ nguyên)
     let viewerFiles = [], viewerIndex = 0;
     function openViewer(files, index) { viewerFiles = files; viewerIndex = index; viewerOverlay.classList.add('active'); updateViewer(); }
     function closeViewer() { viewerOverlay.classList.remove('active'); viewerContent.innerHTML = ''; }
@@ -1210,6 +1268,17 @@
         if(e.key === 'Escape') closeViewer();
       }
     });
+
+    // Gán sự kiện cho nút Làm mới
+    refreshRandomBtn.addEventListener('click', () => {
+      showRandomMedia();
+    });
+    // Khi chuyển sang trang Random, cũng tự load
+    const originalSwitchPage = switchPage;
+    switchPage = function(page) {
+      originalSwitchPage(page);
+      if (page === 'random') showRandomMedia();
+    };
 
     checkSession();
   })();
