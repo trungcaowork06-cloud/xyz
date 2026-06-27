@@ -106,15 +106,18 @@
     .media-card:active { transform: scale(0.97); }
     .media-card img { width: 100%; height: 200px; object-fit: cover; display: block; }
     @media (max-width: 768px) { .media-card img { height: 160px; } }
-    .media-card .delete-btn {
+    .media-card .delete-btn,
+    .media-card .regen-thumb-btn {
       position: absolute; top: 8px; right: 8px;
       background: rgba(0,0,0,0.6); color: white;
       border: none; border-radius: 50%; width: 30px; height: 30px;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; z-index: 2; opacity: 0; transition: opacity 0.2s;
     }
-    .media-card:hover .delete-btn, .media-card:active .delete-btn { opacity: 1; }
-    @media (max-width: 768px) { .media-card .delete-btn { opacity: 1; } }
+    .media-card .regen-thumb-btn { right: 44px; background: rgba(79,140,255,0.8); }
+    .media-card:hover .delete-btn, .media-card:active .delete-btn,
+    .media-card:hover .regen-thumb-btn, .media-card:active .regen-thumb-btn { opacity: 1; }
+    @media (max-width: 768px) { .media-card .delete-btn, .media-card .regen-thumb-btn { opacity: 1; } }
     .media-card .media-type-icon {
       position: absolute; bottom: 8px; right: 8px;
       background: rgba(0,0,0,0.7); color: white;
@@ -128,9 +131,7 @@
       position: absolute; top: 8px; left: 8px;
       width: 24px; height: 24px; z-index: 3;
       accent-color: var(--accent);
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.2s;
+      cursor: pointer; opacity: 0; transition: opacity 0.2s;
     }
     .media-card.select-mode .select-checkbox,
     .media-card:hover .select-checkbox { opacity: 1; }
@@ -188,6 +189,14 @@
     }
     .filter-tab.active { background: var(--accent); color: white; }
 
+    .stats-bar {
+      display: flex; gap: 1.5rem; margin-bottom: 1rem; padding: 0.8rem 1rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 1rem; color: var(--text-secondary); font-size: 0.9rem;
+      flex-wrap: wrap;
+    }
+    .stats-bar strong { color: var(--text-primary); }
+
     .folder-tabs-desktop { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .folder-tab { padding: 0.4rem 1rem; border-radius: 2rem; background: rgba(255,255,255,0.05); cursor: pointer; color: var(--text-secondary); }
     .folder-tab.active { background: var(--accent); color: white; }
@@ -212,10 +221,7 @@
       opacity: 0; pointer-events: none; transition: opacity 0.25s;
     }
     .viewer-overlay.active { opacity: 1; pointer-events: auto; }
-    .viewer-content {
-      width:100%; height:100%; display: flex; align-items: center; justify-content: center;
-      position: relative;
-    }
+    .viewer-content { width:100%; height:100%; display: flex; align-items: center; justify-content: center; position: relative; }
     .viewer-media { max-width:95%; max-height:90%; object-fit: contain; border-radius:0.5rem; user-select:none; -webkit-user-select:none; }
     .viewer-close {
       position: absolute; top:20px; right:20px;
@@ -230,9 +236,7 @@
       border: none; font-size:1.5rem; width:40px; height:40px;
       cursor: pointer; border-radius:50%; z-index:5;
       display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(4px);
-      transition: background 0.2s, opacity 0.2s;
-      opacity: 0.7;
+      backdrop-filter: blur(4px); transition: background 0.2s, opacity 0.2s; opacity: 0.7;
     }
     .viewer-nav:hover { background: rgba(255,255,255,0.3); opacity: 1; }
     .viewer-prev { left:10px; }
@@ -274,15 +278,6 @@
     .auth-toggle span { color: var(--accent); cursor: pointer; font-weight: 500; }
     .auth-toggle span:hover { text-decoration: underline; }
 
-    .upload-placeholder {
-      text-align: center;
-      padding: 2rem;
-      color: var(--text-secondary);
-      border: 2px dashed rgba(255,255,255,0.1);
-      border-radius: 1rem;
-      margin: 1rem 0;
-    }
-
     .file-list-item {
       display: flex;
       align-items: center;
@@ -292,13 +287,7 @@
       border-radius: 0.5rem;
       margin-bottom: 0.3rem;
     }
-    .file-list-item .file-info {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex: 1;
-      margin-right: 1rem;
-    }
+    .file-list-item .file-info { display: flex; align-items: center; gap: 0.5rem; flex: 1; margin-right: 1rem; }
     .file-list-item select {
       padding: 0.3rem 0.5rem;
       background: var(--bg-secondary);
@@ -307,23 +296,13 @@
       color: white;
       font-size: 0.85rem;
     }
-
     .folder-link-btn {
-      position: absolute;
-      bottom: 8px;
-      left: 8px;
-      background: rgba(0,0,0,0.7);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 26px;
-      height: 26px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 4;
-      font-size: 0.8rem;
+      position: absolute; bottom: 8px; left: 8px;
+      background: rgba(0,0,0,0.7); color: white;
+      border: none; border-radius: 50%;
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 4; font-size: 0.8rem;
     }
     .folder-link-btn:hover { background: var(--accent); }
   </style>
@@ -365,7 +344,7 @@
   </div>
 </div>
 
-<!-- Duplicate Check Modal -->
+<!-- Duplicate Modal -->
 <div class="modal-overlay" id="duplicateModal">
   <div class="modal-box">
     <h3><i class="fas fa-copy"></i> Phát hiện trùng lặp</h3>
@@ -408,11 +387,16 @@
     <main class="main-content" id="mainContent">
       <div id="page-library" class="page active">
         <h2 id="libraryTitle"><i class="fas fa-photo-video"></i> Tất cả</h2>
+        <div id="statsBar" class="stats-bar">
+          <span>📁 Tổng: <strong id="statTotalFiles">0</strong> file</span>
+          <span>🖼️ Ảnh: <strong id="statImages">0</strong></span>
+          <span>🎬 Video: <strong id="statVideos">0</strong></span>
+          <span>💾 Dung lượng: <strong id="statSize">0 MB</strong></span>
+        </div>
         <div class="filter-tabs" id="filterTabs">
           <span class="filter-tab active" data-type="all">Tất cả</span>
           <span class="filter-tab" data-type="image">🖼️ Ảnh</span>
           <span class="filter-tab" data-type="video">🎬 Video</span>
-          <!-- Nút kiểm tra trùng luôn hiển thị -->
           <button class="btn outline" id="checkDuplicateBtnPermanent" style="margin-left:auto;" title="Quét file trùng lặp"><i class="fas fa-search"></i> Kiểm tra trùng</button>
         </div>
         <div id="selectionBar" class="selection-bar hidden">
@@ -441,7 +425,6 @@
             <option value="">-- Chọn thư mục mặc định --</option>
           </select>
         </div>
-
         <div class="upload-zone" id="uploadZone">
           <i class="fas fa-cloud-upload-alt fa-2x"></i>
           <div>Nhấn để chọn nhiều ảnh / video</div>
@@ -450,9 +433,7 @@
           </div>
         </div>
         <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none;">
-
         <div id="fileListContainer" style="margin:1rem 0;"></div>
-
         <button class="btn" id="uploadAllBtn"><i class="fas fa-upload"></i> Upload All</button>
         <div id="uploadStatus" style="margin-top:0.5rem;"></div>
         <div class="progress-bar" style="margin-top:0.5rem; width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:4px;">
@@ -460,7 +441,6 @@
         </div>
       </div>
 
-      <!-- Page Random -->
       <div id="page-random" class="page">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
           <h2 id="randomTitle"><i class="fas fa-random"></i> Ngẫu nhiên (10 video/ảnh)</h2>
@@ -511,20 +491,15 @@
     const db = firebase.firestore();
 
     let currentUser = null, currentFolderId = null, foldersCache = [], allMediaCache = [];
-    let mediaFilterType = 'all';
-    let selectedMediaIds = new Set();
-    let serverToken = null;
+    let mediaFilterType = 'all', selectedMediaIds = new Set(), serverToken = null;
     const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 
-    // Confirm modal helpers
-    const confirmModal = $('#confirmModal');
-    const confirmMessage = $('#confirmMessage');
-    const confirmYes = $('#confirmYes');
-    const confirmNo = $('#confirmNo');
+    // Confirm modal
+    const confirmModal = $('#confirmModal'), confirmMessage = $('#confirmMessage');
+    const confirmYes = $('#confirmYes'), confirmNo = $('#confirmNo');
     let confirmResolve = null;
-
     function showConfirm(msg) {
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         confirmMessage.textContent = msg;
         confirmModal.classList.add('active');
         confirmResolve = resolve;
@@ -538,10 +513,8 @@
     confirmNo.addEventListener('click', () => hideConfirm(false));
 
     // Duplicate modal
-    const duplicateModal = $('#duplicateModal');
-    const duplicateInfo = $('#duplicateInfo');
-    const duplicateList = $('#duplicateList');
-    const deleteDuplicatesBtn = $('#deleteDuplicatesBtn');
+    const duplicateModal = $('#duplicateModal'), duplicateInfo = $('#duplicateInfo');
+    const duplicateList = $('#duplicateList'), deleteDuplicatesBtn = $('#deleteDuplicatesBtn');
     const closeDuplicateModal = $('#closeDuplicateModal');
     let duplicateGroups = [];
 
@@ -564,43 +537,31 @@
               <div style="font-size:0.8rem;color:var(--text-secondary);">${group.length} bản</div>
             </div>
             <div class="actions">
-              <button class="btn outline btn-sm keep-first-btn" data-group="${idx}">Giữ 1</button>
-            </div>
-          `;
+              <button class="btn outline keep-first-btn" data-group="${idx}">Giữ 1</button>
+            </div>`;
           duplicateList.appendChild(groupDiv);
         });
-
         document.querySelectorAll('.keep-first-btn').forEach(btn => {
           btn.addEventListener('click', async (e) => {
-            const groupIdx = parseInt(btn.dataset.group);
-            const group = duplicateGroups[groupIdx];
+            const gIdx = parseInt(btn.dataset.group);
+            const group = duplicateGroups[gIdx];
             const toDelete = group.slice(1);
             await deleteMediaItems(toDelete);
             await loadAllMedia();
             applyFilter();
             const newGroups = findDuplicates(allMediaCache);
-            if (newGroups.length > 0) {
-              showDuplicateModal(newGroups);
-            } else {
-              duplicateModal.classList.remove('active');
-            }
+            if (newGroups.length > 0) showDuplicateModal(newGroups);
+            else duplicateModal.classList.remove('active');
           });
         });
       }
       duplicateModal.classList.add('active');
     }
-
-    closeDuplicateModal.addEventListener('click', () => {
-      duplicateModal.classList.remove('active');
-    });
-
+    closeDuplicateModal.addEventListener('click', () => duplicateModal.classList.remove('active'));
     deleteDuplicatesBtn.addEventListener('click', async () => {
       if (!duplicateGroups || duplicateGroups.length === 0) return;
       const toDelete = [];
-      duplicateGroups.forEach(group => {
-        toDelete.push(...group.slice(1));
-      });
-      if (toDelete.length === 0) return;
+      duplicateGroups.forEach(g => toDelete.push(...g.slice(1)));
       await deleteMediaItems(toDelete);
       await loadAllMedia();
       applyFilter();
@@ -612,18 +573,11 @@
       const batch = db.batch();
       for (const item of items) {
         batch.delete(db.collection('users').doc(currentUser).collection('media').doc(item.id));
-        try {
-          await fetch(`${API_BASE}/api/media/${item.id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${serverToken}` }
-          });
-        } catch (e) { console.error('Lỗi xóa file trên VPS:', e); }
+        try { await fetch(`${API_BASE}/api/media/${item.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${serverToken}` } }); } catch(e) {}
       }
       await batch.commit();
-      const idsToDelete = new Set(items.map(i => i.id));
-      allMediaCache = allMediaCache.filter(m => !idsToDelete.has(m.id));
-      selectedMediaIds.clear();
-      updateSelectionUI();
+      allMediaCache = allMediaCache.filter(m => ![...items.map(i => i.id)].includes(m.id));
+      selectedMediaIds.clear(); updateSelectionUI();
     }
 
     function findDuplicates(mediaArray) {
@@ -634,18 +588,9 @@
         map.get(key).push(m);
       }
       const groups = [];
-      for (const [key, items] of map) {
-        if (items.length > 1) groups.push(items);
-      }
+      for (const items of map.values()) if (items.length > 1) groups.push(items);
       return groups;
     }
-
-    // Nút kiểm tra trùng cố định (đã có trong HTML)
-    const checkDuplicateBtnPermanent = $('#checkDuplicateBtnPermanent');
-    checkDuplicateBtnPermanent.addEventListener('click', () => {
-      const groups = findDuplicates(allMediaCache);
-      showDuplicateModal(groups);
-    });
 
     // Auth
     const authPage = $('#authPage'), appMain = $('#appMain');
@@ -659,8 +604,7 @@
     const sidebar = $('#sidebar'), mobileMenuBtn = $('#mobileMenuBtn'), sidebarCloseMobile = $('#sidebarCloseMobile');
     const folderList = $('#folderList'), folderTabsDesktop = $('#folderTabsDesktop'), folderSelectMobile = $('#folderSelectMobile');
     const mediaGallery = $('#mediaGallery'), libraryTitle = $('#libraryTitle');
-    const randomGallery = $('#randomGallery');
-    const refreshRandomBtn = $('#refreshRandomBtn');
+    const randomGallery = $('#randomGallery'), refreshRandomBtn = $('#refreshRandomBtn');
     const newFolderName = $('#newFolderName'), createFolderBtn = $('#createFolderBtn');
     const viewerOverlay = $('#viewerOverlay'), viewerContent = $('#viewerContent'), viewerCloseBtn = $('#viewerClose');
     const viewerPrev = $('#viewerPrev'), viewerNext = $('#viewerNext'), viewerCounter = $('#viewerCounter');
@@ -670,18 +614,19 @@
     const moveSelectedBtn = $('#moveSelectedBtn'), deleteSelectedBtn = $('#deleteSelectedBtn'), cancelSelectionBtn = $('#cancelSelectionBtn');
     const selectAllBtn = $('#selectAllBtn');
     const selectionRect = $('#selectionRect');
+    const checkDuplicateBtnPermanent = $('#checkDuplicateBtnPermanent');
 
-    // Upload elements
+    // Upload
     const defaultFolderSelect = $('#defaultFolderSelect');
-    const fileInput = $('#fileInput');
-    const uploadZone = $('#uploadZone');
+    const fileInput = $('#fileInput'), uploadZone = $('#uploadZone');
     const fileListContainer = $('#fileListContainer');
-    const uploadAllBtn = $('#uploadAllBtn');
-    const uploadStatus = $('#uploadStatus');
-    const uploadProgress = $('#uploadProgress');
+    const uploadAllBtn = $('#uploadAllBtn'), uploadStatus = $('#uploadStatus'), uploadProgress = $('#uploadProgress');
     let filesToUpload = [];
 
-    // Rubber band
+    // Stats elements
+    const statTotalFiles = $('#statTotalFiles'), statImages = $('#statImages'), statVideos = $('#statVideos'), statSize = $('#statSize');
+
+    // Rubber band selection
     let isDragging = false, dragStartX, dragStartY;
     mediaGallery.addEventListener('mousedown', (e) => {
       if (e.target === mediaGallery || e.target.classList.contains('gallery')) {
@@ -702,10 +647,8 @@
       const rect = mediaGallery.getBoundingClientRect();
       const x = e.clientX - rect.left + mediaGallery.scrollLeft;
       const y = e.clientY - rect.top + mediaGallery.scrollTop;
-      const left = Math.min(dragStartX, x);
-      const top = Math.min(dragStartY, y);
-      const width = Math.abs(x - dragStartX);
-      const height = Math.abs(y - dragStartY);
+      const left = Math.min(dragStartX, x), top = Math.min(dragStartY, y);
+      const width = Math.abs(x - dragStartX), height = Math.abs(y - dragStartY);
       selectionRect.style.left = left + 'px';
       selectionRect.style.top = top + 'px';
       selectionRect.style.width = width + 'px';
@@ -716,14 +659,11 @@
       isDragging = false;
       selectionRect.style.display = 'none';
       const rect = selectionRect.getBoundingClientRect();
-      const cards = document.querySelectorAll('.media-card');
-      cards.forEach(card => {
+      document.querySelectorAll('.media-card').forEach(card => {
         const cardRect = card.getBoundingClientRect();
-        const overlap = !(cardRect.right < rect.left || cardRect.left > rect.right ||
-                          cardRect.bottom < rect.top || cardRect.top > rect.bottom);
-        if (overlap && card.dataset.mediaId) {
+        if (!(cardRect.right < rect.left || cardRect.left > rect.right || cardRect.bottom < rect.top || cardRect.top > rect.bottom)) {
           const id = card.dataset.mediaId;
-          if (!selectedMediaIds.has(id)) {
+          if (id && !selectedMediaIds.has(id)) {
             selectedMediaIds.add(id);
             card.classList.add('selected');
           }
@@ -739,14 +679,9 @@
     async function apiCall(url, options = {}) {
       const headers = options.headers || {};
       if (serverToken) headers['Authorization'] = `Bearer ${serverToken}`;
-      if (!(options.body instanceof FormData)) {
-        headers['Content-Type'] = 'application/json';
-      }
+      if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
       const res = await fetch(`${API_BASE}${url}`, { ...options, headers });
-      if (res.status === 401) {
-        logout();
-        throw new Error('Phiên đăng nhập hết hạn.');
-      }
+      if (res.status === 401) { logout(); throw new Error('Phiên hết hạn.'); }
       return res.json();
     }
 
@@ -760,25 +695,16 @@
       if(p!==c) { registerError.textContent='Xác nhận không khớp.'; return; }
       try {
         const data = await apiCall('/api/register', {
-          method: 'POST',
-          body: JSON.stringify({ username: u, password: p })
+          method: 'POST', body: JSON.stringify({ username: u, password: p })
         });
         if (data.token) {
-          serverToken = data.token;
-          currentUser = u;
-          localStorage.setItem('vaultUser', u);
-          localStorage.setItem('vaultToken', serverToken);
+          serverToken = data.token; currentUser = u;
+          localStorage.setItem('vaultUser', u); localStorage.setItem('vaultToken', serverToken);
           displayUser.textContent = u;
-          authPage.classList.add('hidden');
-          appMain.classList.remove('hidden');
+          authPage.classList.add('hidden'); appMain.classList.remove('hidden');
           regUsername.value=''; regPassword.value=''; regConfirm.value='';
-          await loadFolders();
-          await loadAllMedia();
-          applyFilter();
-          showRandomMedia();
-        } else {
-          registerError.textContent = data.error || 'Lỗi đăng ký.';
-        }
+          await loadFolders(); await loadAllMedia(); applyFilter(); showRandomMedia(); loadStats();
+        } else registerError.textContent = data.error || 'Lỗi đăng ký.';
       } catch(e) { registerError.textContent = 'Lỗi kết nối: ' + e.message; }
     };
 
@@ -787,71 +713,47 @@
       if(!u||!p) { loginError.textContent='Vui lòng nhập đầy đủ.'; return; }
       try {
         const data = await apiCall('/api/login', {
-          method: 'POST',
-          body: JSON.stringify({ username: u, password: p })
+          method: 'POST', body: JSON.stringify({ username: u, password: p })
         });
         if (data.token) {
-          serverToken = data.token;
-          currentUser = u;
-          localStorage.setItem('vaultUser', u);
-          localStorage.setItem('vaultToken', serverToken);
+          serverToken = data.token; currentUser = u;
+          localStorage.setItem('vaultUser', u); localStorage.setItem('vaultToken', serverToken);
           displayUser.textContent = u;
-          authPage.classList.add('hidden');
-          appMain.classList.remove('hidden');
-          await loadFolders();
-          await loadAllMedia();
-          applyFilter();
-          showRandomMedia();
+          authPage.classList.add('hidden'); appMain.classList.remove('hidden');
           loginUsername.value=''; loginPassword.value='';
-        } else {
-          loginError.textContent = data.error || 'Sai tên đăng nhập hoặc mật khẩu.';
-        }
+          await loadFolders(); await loadAllMedia(); applyFilter(); showRandomMedia(); loadStats();
+        } else loginError.textContent = data.error || 'Sai thông tin.';
       } catch(e) { loginError.textContent = 'Lỗi kết nối: ' + e.message; }
     };
 
     function logout() {
-      currentUser = null;
-      serverToken = null;
-      localStorage.removeItem('vaultUser');
-      localStorage.removeItem('vaultToken');
-      authPage.classList.remove('hidden');
-      appMain.classList.add('hidden');
+      currentUser = null; serverToken = null;
+      localStorage.removeItem('vaultUser'); localStorage.removeItem('vaultToken');
+      authPage.classList.remove('hidden'); appMain.classList.add('hidden');
       loginForm.classList.remove('hidden'); registerForm.classList.add('hidden');
       loginError.textContent=''; registerError.textContent='';
-      allMediaCache = []; foldersCache = [];
-      selectedMediaIds.clear();
-      updateSelectionUI();
+      allMediaCache = []; foldersCache = []; selectedMediaIds.clear(); updateSelectionUI();
       sidebar.classList.remove('open');
     }
     logoutBtn.onclick = logout; mobileLogout.onclick = logout;
 
     async function checkSession() {
-      const savedUser = localStorage.getItem('vaultUser');
-      const savedToken = localStorage.getItem('vaultToken');
+      const savedUser = localStorage.getItem('vaultUser'), savedToken = localStorage.getItem('vaultToken');
       if (savedUser && savedToken) {
         try {
-          const res = await fetch(`${API_BASE}/api/me`, {
-            headers: { 'Authorization': `Bearer ${savedToken}` }
-          });
+          const res = await fetch(`${API_BASE}/api/me`, { headers: { 'Authorization': `Bearer ${savedToken}` } });
           if (res.ok) {
             const data = await res.json();
-            currentUser = data.username;
-            serverToken = savedToken;
+            currentUser = data.username; serverToken = savedToken;
             displayUser.textContent = currentUser;
-            authPage.classList.add('hidden');
-            appMain.classList.remove('hidden');
-            await loadFolders();
-            await loadAllMedia();
-            applyFilter();
-            showRandomMedia();
+            authPage.classList.add('hidden'); appMain.classList.remove('hidden');
+            await loadFolders(); await loadAllMedia(); applyFilter(); showRandomMedia(); loadStats();
             return;
           }
         } catch(e) {}
-        localStorage.removeItem('vaultUser');
-        localStorage.removeItem('vaultToken');
+        localStorage.removeItem('vaultUser'); localStorage.removeItem('vaultToken');
       }
-      authPage.classList.remove('hidden');
-      appMain.classList.add('hidden');
+      authPage.classList.remove('hidden'); appMain.classList.add('hidden');
     }
 
     function switchPage(page) {
@@ -863,47 +765,70 @@
     }
     $$('.nav-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
 
+    // Stats
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API_BASE}/api/stats`, { headers: { 'Authorization': `Bearer ${serverToken}` } });
+        if (res.ok) {
+          const data = await res.json();
+          statTotalFiles.textContent = data.totalFiles;
+          statImages.textContent = data.imageCount;
+          statVideos.textContent = data.videoCount;
+          statSize.textContent = (data.totalSize / (1024 * 1024)).toFixed(1);
+        }
+      } catch(e) { console.error('Lỗi tải thống kê:', e); }
+    }
+
+    // Random
     function showRandomMedia() {
-      if (!allMediaCache.length) {
-        randomGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Chưa có media nào.</p></div>';
-        return;
-      }
+      if (!allMediaCache.length) { randomGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Chưa có media.</p></div>'; return; }
       const videos = allMediaCache.filter(m => m.resource_type === 'video');
       const images = allMediaCache.filter(m => m.resource_type === 'image');
       let pool = [...videos];
       if (pool.length < 10) {
         const shuffledImages = [...images].sort(() => Math.random() - 0.5);
-        const needed = 10 - pool.length;
-        pool = pool.concat(shuffledImages.slice(0, needed));
+        pool = pool.concat(shuffledImages.slice(0, 10 - pool.length));
       }
       const shuffled = [...pool].sort(() => Math.random() - 0.5);
-      const selected = shuffled.slice(0, Math.min(10, shuffled.length));
-      renderRandomMedia(selected);
-    }
-
-    function goToFolder(folderId) {
-      currentFolderId = folderId || '__unfiled__';
-      const folder = folderId ? foldersCache.find(f => f.id === folderId) : null;
-      libraryTitle.innerHTML = folder
-        ? `<i class="fas fa-folder-open"></i> ${folder.name}`
-        : (folderId === '__unfiled__' ? '<i class="fas fa-box-open"></i> Chưa phân loại' : '<i class="fas fa-photo-video"></i> Tất cả');
-      document.querySelectorAll('#folderList .folder-item').forEach(el => el.classList.remove('active'));
-      const activeItem = document.querySelector(`#folderList .folder-item[data-folder="${currentFolderId}"]`);
-      if (activeItem) activeItem.classList.add('active');
-      switchPage('library');
-      applyFilter();
+      renderRandomMedia(shuffled.slice(0, Math.min(10, shuffled.length)));
     }
 
     function getThumbnailUrl(file) {
-      if (file.mimetype && file.mimetype.startsWith('video')) {
-        return file.thumbnail_url ? API_BASE + file.thumbnail_url : 'data:image/svg+xml,' + encodeURIComponent(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
-            <rect width="640" height="360" fill="#1e2538" rx="10"/>
-            <polygon points="260,120 260,240 400,180" fill="#4f8cff"/>
-          </svg>
-        `);
+      if (file.mimetype?.startsWith('video')) {
+        return file.thumbnail_url ? API_BASE + file.thumbnail_url : 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#1e2538" rx="10"/><polygon points="260,120 260,240 400,180" fill="#4f8cff"/></svg>`);
       }
       return API_BASE + (file.url || `/uploads/${file.filename}`);
+    }
+
+    function addRegenButton(card, file, imgElement) {
+      const regenBtn = document.createElement('button');
+      regenBtn.className = 'regen-thumb-btn';
+      regenBtn.innerHTML = '<i class="fas fa-image"></i>';
+      regenBtn.title = 'Tạo thumbnail';
+      regenBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        regenBtn.disabled = true;
+        regenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        try {
+          const res = await fetch(`${API_BASE}/api/media/${file.id}/regenerate-thumbnail`, {
+            method: 'POST', headers: { 'Authorization': `Bearer ${serverToken}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.thumbnail_url) {
+              file.thumbnail_url = data.thumbnail_url;
+              imgElement.src = API_BASE + data.thumbnail_url;
+              regenBtn.remove();
+            }
+          } else {
+            const err = await res.json();
+            alert('Lỗi: ' + (err.error || 'Không thể tạo thumbnail'));
+          }
+        } catch (ex) { alert('Lỗi kết nối: ' + ex.message); }
+        regenBtn.disabled = false;
+        regenBtn.innerHTML = '<i class="fas fa-image"></i>';
+      });
+      card.appendChild(regenBtn);
     }
 
     function renderRandomMedia(files) {
@@ -913,42 +838,23 @@
         const isVideo = file.resource_type === 'video';
         const card = document.createElement('div');
         card.className = 'media-card' + (isVideo ? ' video-thumb' : ' image-thumb');
-        const img = document.createElement('img');
-        img.alt = file.original_name || '';
-        img.loading = 'lazy';
+        const img = document.createElement('img'); img.alt = file.original_name||''; img.loading = 'lazy';
         img.src = getThumbnailUrl(file);
-        img.onerror = () => {
-          img.src = 'data:image/svg+xml,' + encodeURIComponent(`
-            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-              <rect width="200" height="200" fill="#1e2538" rx="10"/>
-              <text x="100" y="110" font-size="20" text-anchor="middle" fill="#9aa4bf">Ảnh lỗi</text>
-            </svg>
-          `);
-        };
+        img.onerror = () => { img.src = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#1e2538" rx="10"/><text x="100" y="110" font-size="20" text-anchor="middle" fill="#9aa4bf">Lỗi</text></svg>`); };
         card.appendChild(img);
-        const folderBtn = document.createElement('button');
-        folderBtn.className = 'folder-link-btn';
+        const folderBtn = document.createElement('button'); folderBtn.className = 'folder-link-btn';
         folderBtn.innerHTML = '<i class="fas fa-folder-open"></i>';
-        folderBtn.title = 'Đi tới thư mục chứa media này';
-        folderBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          goToFolder(file.folder_id);
-        });
+        folderBtn.addEventListener('click', e => { e.stopPropagation(); goToFolder(file.folder_id); });
         card.appendChild(folderBtn);
-        const typeIcon = document.createElement('div');
-        typeIcon.className = 'media-type-icon';
-        typeIcon.innerHTML = isVideo ? '<i class="fas fa-play"></i>' : '';
-        card.appendChild(typeIcon);
+        if (isVideo && !file.thumbnail_url) addRegenButton(card, file, img);
+        const typeIcon = document.createElement('div'); typeIcon.className = 'media-type-icon'; typeIcon.innerHTML = isVideo ? '<i class="fas fa-play"></i>' : ''; card.appendChild(typeIcon);
         card.addEventListener('click', () => openViewer(files, index));
         frag.appendChild(card);
       });
       randomGallery.appendChild(frag);
     }
 
-    refreshRandomBtn.addEventListener('click', () => {
-      showRandomMedia();
-    });
-
+    // Folders
     async function loadFolders() {
       const snap = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
       foldersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -958,145 +864,106 @@
     }
 
     function renderFolders() {
-      let folderItemsHTML = `<div class="folder-item" data-folder="__unfiled__"><i class="fas fa-box-open"></i> <span class="folder-name">Chưa phân loại</span></div>`;
-      foldersCache.forEach(f => {
-        folderItemsHTML += `
-          <div class="folder-item" data-folder="${f.id}">
-            <i class="fas fa-folder"></i> <span class="folder-name">${f.name}</span>
-            <div class="folder-actions">
-              <button class="rename-folder-btn" data-id="${f.id}" data-name="${f.name}" title="Đổi tên"><i class="fas fa-pen"></i></button>
-              <button class="delete-folder-btn" data-id="${f.id}" data-name="${f.name}" title="Xóa"><i class="fas fa-trash-alt"></i></button>
-            </div>
-          </div>`;
-      });
-      folderList.innerHTML = folderItemsHTML;
+      let html = '<div class="folder-item" data-folder="__unfiled__"><i class="fas fa-box-open"></i> <span>Chưa phân loại</span></div>';
+      foldersCache.forEach(f => html += `<div class="folder-item" data-folder="${f.id}"><i class="fas fa-folder"></i> <span>${f.name}</span><div class="folder-actions"><button class="rename-folder-btn" data-id="${f.id}" data-name="${f.name}"><i class="fas fa-pen"></i></button><button class="delete-folder-btn" data-id="${f.id}" data-name="${f.name}"><i class="fas fa-trash-alt"></i></button></div></div>`);
+      folderList.innerHTML = html;
 
       let tabsHTML = '<span class="folder-tab active" data-folder="">Tất cả</span><span class="folder-tab" data-folder="__unfiled__">📂 Chưa phân loại</span>';
-      foldersCache.forEach(f => { tabsHTML += `<span class="folder-tab" data-folder="${f.id}">${f.name}</span>`; });
+      foldersCache.forEach(f => tabsHTML += `<span class="folder-tab" data-folder="${f.id}">${f.name}</span>`);
       folderTabsDesktop.innerHTML = tabsHTML;
 
       let selectHTML = '<option value="">Tất cả</option><option value="__unfiled__">📂 Chưa phân loại</option>';
-      foldersCache.forEach(f => { selectHTML += `<option value="${f.id}">${f.name}</option>`; });
+      foldersCache.forEach(f => selectHTML += `<option value="${f.id}">${f.name}</option>`);
       folderSelectMobile.innerHTML = selectHTML;
 
-      defaultFolderSelect.innerHTML = '<option value="">-- Chọn thư mục mặc định --</option>';
-      foldersCache.forEach(f => { defaultFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`; });
-      defaultFolderSelect.innerHTML += '<option value="__unfiled__">📂 Chưa phân loại (không thư mục)</option>';
+      defaultFolderSelect.innerHTML = '<option value="">-- Chọn thư mục --</option>';
+      foldersCache.forEach(f => defaultFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`);
+      defaultFolderSelect.innerHTML += '<option value="__unfiled__">📂 Chưa phân loại</option>';
 
       moveToFolderSelect.innerHTML = '<option value="">-- Chọn thư mục --</option>';
-      foldersCache.forEach(f => { moveToFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`; });
+      foldersCache.forEach(f => moveToFolderSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`);
 
       document.querySelectorAll('#folderList .folder-item').forEach(el => {
-        el.addEventListener('click', (e) => {
+        el.addEventListener('click', e => {
           if (e.target.closest('.folder-actions')) return;
           currentFolderId = el.dataset.folder;
-          const folderName = el.querySelector('.folder-name').textContent;
-          libraryTitle.innerHTML = `<i class="fas fa-${currentFolderId === '__unfiled__' ? 'box-open' : 'folder-open'}"></i> ${folderName}`;
-          switchPage('library');
-          clearSelection();
-          applyFilter();
-          highlightActiveFolder();
+          libraryTitle.innerHTML = `<i class="fas fa-${currentFolderId==='__unfiled__'?'box-open':'folder-open'}"></i> ${el.querySelector('span').textContent}`;
+          switchPage('library'); clearSelection(); applyFilter(); highlightActiveFolder();
         });
       });
-
       document.querySelectorAll('.folder-tab').forEach(tab => {
         tab.addEventListener('click', () => {
           const fid = tab.dataset.folder || null;
           currentFolderId = fid;
-          libraryTitle.innerHTML = fid === '__unfiled__' ? '<i class="fas fa-box-open"></i> Chưa phân loại' : 
-                                   (fid ? `<i class="fas fa-folder-open"></i> ${tab.textContent}` : '<i class="fas fa-photo-video"></i> Tất cả');
-          document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          folderSelectMobile.value = fid || '';
-          clearSelection();
-          applyFilter();
+          libraryTitle.innerHTML = fid === '__unfiled__' ? '<i class="fas fa-box-open"></i> Chưa phân loại' : (fid ? `<i class="fas fa-folder-open"></i> ${tab.textContent}` : '<i class="fas fa-photo-video"></i> Tất cả');
+          document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active')); tab.classList.add('active');
+          folderSelectMobile.value = fid || ''; clearSelection(); applyFilter();
         });
       });
-
       folderSelectMobile.addEventListener('change', () => {
         const val = folderSelectMobile.value;
         currentFolderId = val || null;
-        const selectedText = folderSelectMobile.options[folderSelectMobile.selectedIndex].text;
-        libraryTitle.innerHTML = val === '__unfiled__' ? '<i class="fas fa-box-open"></i> Chưa phân loại' :
-                                 (val ? `<i class="fas fa-folder-open"></i> ${selectedText}` : '<i class="fas fa-photo-video"></i> Tất cả');
-        clearSelection();
-        applyFilter();
+        const txt = folderSelectMobile.options[folderSelectMobile.selectedIndex].text;
+        libraryTitle.innerHTML = val === '__unfiled__' ? '<i class="fas fa-box-open"></i> Chưa phân loại' : (val ? `<i class="fas fa-folder-open"></i> ${txt}` : '<i class="fas fa-photo-video"></i> Tất cả');
+        clearSelection(); applyFilter();
       });
 
       document.querySelectorAll('.rename-folder-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async e => {
           e.stopPropagation();
-          const folderId = btn.dataset.id;
-          const oldName = btn.dataset.name;
-          const newName = prompt('Nhập tên mới:', oldName);
-          if (newName && newName.trim() !== '' && newName.trim() !== oldName) {
-            await db.collection('users').doc(currentUser).collection('folders').doc(folderId).update({ name: newName.trim() });
+          const newName = prompt('Tên mới:', btn.dataset.name);
+          if (newName && newName.trim() && newName.trim() !== btn.dataset.name) {
+            await db.collection('users').doc(currentUser).collection('folders').doc(btn.dataset.id).update({ name: newName.trim() });
             loadFolders();
           }
         });
       });
-
       document.querySelectorAll('.delete-folder-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async e => {
           e.stopPropagation();
-          const folderId = btn.dataset.id;
-          const folderName = btn.dataset.name;
-          const confirmed = await showConfirm(`Xóa thư mục "${folderName}"? Các ảnh/video sẽ về thư mục gốc.`);
-          if (confirmed) {
-            await db.collection('users').doc(currentUser).collection('folders').doc(folderId).delete();
-            allMediaCache = allMediaCache.map(m => m.folder_id === folderId ? {...m, folder_id: null} : m);
-            loadFolders();
-            if (currentFolderId === folderId) { currentFolderId = null; libraryTitle.innerHTML = '<i class="fas fa-photo-video"></i> Tất cả'; }
-            clearSelection(); applyFilter();
+          if (await showConfirm(`Xóa thư mục "${btn.dataset.name}"?`)) {
+            await db.collection('users').doc(currentUser).collection('folders').doc(btn.dataset.id).delete();
+            allMediaCache = allMediaCache.map(m => m.folder_id === btn.dataset.id ? {...m, folder_id: null} : m);
+            loadFolders(); if (currentFolderId === btn.dataset.id) { currentFolderId = null; libraryTitle.innerHTML = '<i class="fas fa-photo-video"></i> Tất cả'; }
+            clearSelection(); applyFilter(); loadStats();
           }
         });
       });
-
       highlightActiveFolder();
     }
 
     function highlightActiveFolder() {
       document.querySelectorAll('#folderList .folder-item').forEach(el => el.classList.remove('active'));
-      if (currentFolderId) {
-        const activeItem = document.querySelector(`#folderList .folder-item[data-folder="${currentFolderId}"]`);
-        if (activeItem) activeItem.classList.add('active');
-      }
+      if (currentFolderId) document.querySelector(`#folderList .folder-item[data-folder="${currentFolderId}"]`)?.classList.add('active');
       document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
-      const activeTab = document.querySelector(`.folder-tab[data-folder="${currentFolderId || ''}"]`);
-      if (activeTab) activeTab.classList.add('active');
+      document.querySelector(`.folder-tab[data-folder="${currentFolderId || ''}"]`)?.classList.add('active');
       folderSelectMobile.value = currentFolderId || '';
     }
 
     createFolderBtn.onclick = async () => {
-      const name = newFolderName.value.trim();
-      if(!name) return;
+      const name = newFolderName.value.trim(); if (!name) return;
       await db.collection('users').doc(currentUser).collection('folders').add({ name });
-      newFolderName.value = '';
-      loadFolders();
+      newFolderName.value = ''; loadFolders();
     };
 
     async function loadAllMedia() {
       try {
-        const res = await fetch(`${API_BASE}/api/media`, {
-          headers: { 'Authorization': `Bearer ${serverToken}` }
-        });
+        const res = await fetch(`${API_BASE}/api/media`, { headers: { 'Authorization': `Bearer ${serverToken}` } });
         if (res.ok) {
           const data = await res.json();
           allMediaCache = (data.files || []).filter(f => f.original_name && f.size);
         }
-      } catch (e) {
-        console.error('Lỗi tải media:', e);
-      }
+      } catch(e) { console.error('Lỗi tải media:', e); }
     }
 
     function applyFilter() {
       let filtered = allMediaCache;
       if (currentFolderId === '__unfiled__') filtered = filtered.filter(m => !m.folder_id);
       else if (currentFolderId) filtered = filtered.filter(m => m.folder_id == currentFolderId);
-      if (mediaFilterType === 'image') filtered = filtered.filter(m => m.mimetype && m.mimetype.startsWith('image'));
-      else if (mediaFilterType === 'video') filtered = filtered.filter(m => m.mimetype && m.mimetype.startsWith('video'));
-      const images = filtered.filter(m => m.mimetype && m.mimetype.startsWith('image'));
-      const videos = filtered.filter(m => m.mimetype && m.mimetype.startsWith('video'));
+      if (mediaFilterType === 'image') filtered = filtered.filter(m => m.mimetype?.startsWith('image'));
+      else if (mediaFilterType === 'video') filtered = filtered.filter(m => m.mimetype?.startsWith('video'));
+      const images = filtered.filter(m => m.mimetype?.startsWith('image'));
+      const videos = filtered.filter(m => m.mimetype?.startsWith('video'));
       renderMedia([...images, ...videos]);
     }
 
@@ -1105,25 +972,29 @@
         filterTabs.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         mediaFilterType = tab.dataset.type;
-        clearSelection();
-        applyFilter();
+        clearSelection(); applyFilter();
       });
     });
 
-    function clearSelection() { selectedMediaIds.clear(); updateSelectionUI(); document.querySelectorAll('.media-card').forEach(card => card.classList.remove('selected')); }
+    checkDuplicateBtnPermanent.addEventListener('click', () => {
+      showDuplicateModal(findDuplicates(allMediaCache));
+    });
+
+    // Selection
+    function clearSelection() { selectedMediaIds.clear(); updateSelectionUI(); document.querySelectorAll('.media-card').forEach(c => c.classList.remove('selected')); }
     function updateSelectionUI() {
       const count = selectedMediaIds.size;
-      if (count > 0) { selectionBar.classList.remove('hidden'); selectionCount.textContent = `${count} đã chọn`; }
-      else { selectionBar.classList.add('hidden'); }
+      selectionBar.classList.toggle('hidden', count === 0);
+      if (count > 0) selectionCount.textContent = `${count} đã chọn`;
     }
-    function toggleSelectMedia(mediaId, cardElement) {
-      if (selectedMediaIds.has(mediaId)) { selectedMediaIds.delete(mediaId); cardElement.classList.remove('selected'); }
-      else { selectedMediaIds.add(mediaId); cardElement.classList.add('selected'); }
+    function toggleSelectMedia(id, card) {
+      if (selectedMediaIds.has(id)) { selectedMediaIds.delete(id); card.classList.remove('selected'); }
+      else { selectedMediaIds.add(id); card.classList.add('selected'); }
       updateSelectionUI();
     }
     selectAllBtn.addEventListener('click', () => {
       const cards = document.querySelectorAll('.media-card');
-      const visibleIds = Array.from(cards).map(c => c.dataset.mediaId).filter(Boolean);
+      const visibleIds = [...cards].map(c => c.dataset.mediaId).filter(Boolean);
       const allSelected = visibleIds.every(id => selectedMediaIds.has(id));
       if (allSelected) { visibleIds.forEach(id => selectedMediaIds.delete(id)); cards.forEach(c => c.classList.remove('selected')); }
       else { visibleIds.forEach(id => selectedMediaIds.add(id)); cards.forEach(c => c.classList.add('selected')); }
@@ -1131,74 +1002,50 @@
     });
     cancelSelectionBtn.addEventListener('click', clearSelection);
     moveSelectedBtn.addEventListener('click', async () => {
-      const targetFolderId = moveToFolderSelect.value;
-      if (!targetFolderId) { alert('Vui lòng chọn thư mục đích.'); return; }
+      const target = moveToFolderSelect.value;
+      if (!target) { alert('Chọn thư mục đích.'); return; }
       if (selectedMediaIds.size === 0) return;
-      const confirmed = await showConfirm(`Di chuyển ${selectedMediaIds.size} mục đã chọn đến thư mục này?`);
-      if (!confirmed) return;
+      if (!await showConfirm(`Di chuyển ${selectedMediaIds.size} mục?`)) return;
       const batch = db.batch();
       const mediaToMove = allMediaCache.filter(m => selectedMediaIds.has(m.id));
-      mediaToMove.forEach(m => { batch.update(db.collection('users').doc(currentUser).collection('media').doc(m.id), { folder_id: targetFolderId }); m.folder_id = targetFolderId; });
-      try { await batch.commit(); clearSelection(); applyFilter(); } catch (e) { alert('Lỗi: ' + e.message); }
+      mediaToMove.forEach(m => { batch.update(db.collection('users').doc(currentUser).collection('media').doc(m.id), { folder_id: target }); m.folder_id = target; });
+      try { await batch.commit(); clearSelection(); applyFilter(); loadStats(); } catch(e) { alert('Lỗi: '+e.message); }
     });
-    
-    // Nút xóa đã chọn (đã sửa)
-    deleteSelectedBtn.addEventListener('click', async () => {
-      if (selectedMediaIds.size === 0) {
-        alert('Vui lòng chọn ít nhất một mục để xóa.');
-        return;
-      }
-      const confirmed = await showConfirm(`Xóa ${selectedMediaIds.size} mục đã chọn?`);
-      if (!confirmed) return;
 
+    deleteSelectedBtn.addEventListener('click', async () => {
+      if (selectedMediaIds.size === 0) { alert('Vui lòng chọn ít nhất một mục.'); return; }
+      if (!await showConfirm(`Xóa ${selectedMediaIds.size} mục đã chọn?`)) return;
       const batch = db.batch();
-      const mediaToDelete = allMediaCache.filter(m => selectedMediaIds.has(m.id));
-      
-      for (const m of mediaToDelete) {
+      const toDelete = allMediaCache.filter(m => selectedMediaIds.has(m.id));
+      for (const m of toDelete) {
         batch.delete(db.collection('users').doc(currentUser).collection('media').doc(m.id));
-        try {
-          await fetch(`${API_BASE}/api/media/${m.id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${serverToken}` }
-          });
-        } catch(e) {
-          console.error('Lỗi xóa file trên VPS:', e);
-        }
+        try { await fetch(`${API_BASE}/api/media/${m.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${serverToken}` } }); } catch(e) {}
       }
-      
-      try {
-        await batch.commit();
-        allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id));
-        clearSelection();
-        applyFilter();
-      } catch (e) {
-        alert('Lỗi khi xóa: ' + e.message);
-      }
+      try { await batch.commit(); allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id)); clearSelection(); applyFilter(); loadStats(); } catch(e) { alert('Lỗi: '+e.message); }
     });
 
     // Upload
     function buildFolderOptions(selectedId = '') {
-      let opts = '<option value="">-- Chọn thư mục --</option>';
-      foldersCache.forEach(f => { opts += `<option value="${f.id}" ${f.id === selectedId ? 'selected' : ''}>${f.name}</option>`; });
-      opts += `<option value="__unfiled__" ${selectedId === '__unfiled__' ? 'selected' : ''}>📂 Chưa phân loại</option>`;
+      let opts = '<option value="">-- Chọn --</option>';
+      foldersCache.forEach(f => opts += `<option value="${f.id}" ${f.id===selectedId?'selected':''}>${f.name}</option>`);
+      opts += `<option value="__unfiled__" ${selectedId==='__unfiled__'?'selected':''}>📂 Chưa phân loại</option>`;
       return opts;
     }
-
     function renderFileList() {
       fileListContainer.innerHTML = '';
-      if (filesToUpload.length === 0) { fileListContainer.innerHTML = '<p style="color:var(--text-secondary);">Chưa có file nào được chọn.</p>'; return; }
+      if (filesToUpload.length === 0) { fileListContainer.innerHTML = '<p style="color:var(--text-secondary);">Chưa có file.</p>'; return; }
       const defaultFolder = defaultFolderSelect.value;
       filesToUpload.forEach((item, idx) => {
-        const file = item.file;
         const div = document.createElement('div'); div.className = 'file-list-item';
-        div.innerHTML = `
-          <div class="file-info"><i class="far fa-file"></i><span>${file.name} (${(file.size/1024/1024).toFixed(1)} MB)</span></div>
-          <select class="file-folder-select" data-index="${idx}">${buildFolderOptions(item.folderId || defaultFolder)}</select>
-        `;
+        div.innerHTML = `<div class="file-info"><i class="far fa-file"></i><span>${item.file.name} (${(item.file.size/1024/1024).toFixed(1)} MB)</span></div>
+          <select class="file-folder-select" data-index="${idx}">${buildFolderOptions(item.folderId || defaultFolder)}</select>`;
         fileListContainer.appendChild(div);
       });
-      document.querySelectorAll('.file-folder-select').forEach(select => {
-        select.addEventListener('change', (e) => { const idx = parseInt(select.dataset.index); filesToUpload[idx].folderId = select.value || null; });
+      document.querySelectorAll('.file-folder-select').forEach(sel => {
+        sel.addEventListener('change', e => {
+          const idx = parseInt(sel.dataset.index);
+          filesToUpload[idx].folderId = sel.value || null;
+        });
       });
     }
 
@@ -1209,23 +1056,15 @@
     fileInput.addEventListener('change', () => {
       const newFiles = Array.from(fileInput.files);
       const defaultFolder = defaultFolderSelect.value;
-      let addedCount = 0, skippedCount = 0;
+      let added = 0, skipped = 0;
       newFiles.forEach(file => {
-        if (isDuplicateFile(file)) {
-          skippedCount++;
-        } else {
-          filesToUpload.push({ file, folderId: defaultFolder || null });
-          addedCount++;
-        }
+        if (isDuplicateFile(file)) skipped++;
+        else { filesToUpload.push({ file, folderId: defaultFolder || null }); added++; }
       });
       renderFileList();
-      if (skippedCount > 0) {
-        uploadStatus.innerHTML = `⏭️ Đã bỏ qua ${skippedCount} file đã tồn tại trên server.`;
-      }
+      if (skipped > 0) uploadStatus.innerHTML = `⏭️ Đã bỏ qua ${skipped} file trùng.`;
       fileInput.value = '';
     });
-
-    defaultFolderSelect.addEventListener('change', () => {});
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor='var(--accent)'; });
     uploadZone.addEventListener('dragleave', () => uploadZone.style.borderColor='');
@@ -1234,19 +1073,13 @@
       if (e.dataTransfer.files.length) {
         const newFiles = Array.from(e.dataTransfer.files);
         const defaultFolder = defaultFolderSelect.value;
-        let addedCount = 0, skippedCount = 0;
+        let added = 0, skipped = 0;
         newFiles.forEach(file => {
-          if (isDuplicateFile(file)) {
-            skippedCount++;
-          } else {
-            filesToUpload.push({ file, folderId: defaultFolder || null });
-            addedCount++;
-          }
+          if (isDuplicateFile(file)) skipped++;
+          else { filesToUpload.push({ file, folderId: defaultFolder || null }); added++; }
         });
         renderFileList();
-        if (skippedCount > 0) {
-          uploadStatus.innerHTML = `⏭️ Đã bỏ qua ${skippedCount} file đã tồn tại trên server.`;
-        }
+        if (skipped > 0) uploadStatus.innerHTML = `⏭️ Đã bỏ qua ${skipped} file trùng.`;
       }
     });
 
@@ -1263,8 +1096,7 @@
         const item = filesToUpload[i];
         const file = item.file;
         const folderId = item.folderId === '__unfiled__' ? null : (item.folderId || null);
-        const progressPercent = Math.round((i / total) * 100);
-        uploadProgress.style.width = progressPercent + '%';
+        uploadProgress.style.width = Math.round((i / total) * 100) + '%';
 
         if (isDuplicateFile(file)) { skipCount++; continue; }
 
@@ -1278,58 +1110,39 @@
           xhr.open('POST', `${API_BASE}/api/upload`);
           xhr.setRequestHeader('Authorization', `Bearer ${serverToken}`);
           xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              const pct = Math.round((e.loaded / e.total) * 100);
-              uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${file.name} - ${pct}%`;
-            }
+            if (e.lengthComputable) uploadStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${file.name} - ${Math.round((e.loaded / e.total) * 100)}%`;
           };
           const result = await new Promise((resolve, reject) => {
             xhr.onload = () => {
-              if (xhr.status === 200 || xhr.status === 201) {
-                const res = JSON.parse(xhr.responseText);
-                resolve(res);
-              } else {
-                try {
-                  const err = JSON.parse(xhr.responseText);
-                  reject(new Error(err.error || xhr.statusText));
-                } catch (e) {
-                  reject(new Error(xhr.statusText || 'Lỗi không xác định'));
-                }
+              if (xhr.status === 200 || xhr.status === 201) resolve(JSON.parse(xhr.responseText));
+              else {
+                try { const err = JSON.parse(xhr.responseText); reject(new Error(err.error || xhr.statusText)); }
+                catch(e) { reject(new Error(xhr.statusText || 'Lỗi không xác định')); }
               }
             };
             xhr.onerror = () => reject(new Error('Lỗi kết nối'));
             xhr.send(formData);
           });
-          // Thêm vào cache
           allMediaCache.push({
-            id: result.id,
-            url: result.url,
-            thumbnail_url: result.thumbnail_url,
-            original_name: result.original_name,
-            size: result.size,
-            mimetype: result.mimetype,
-            folder_id: result.folder_id,
-            resource_type: result.mimetype && result.mimetype.startsWith('video') ? 'video' : 'image'
+            id: result.id, url: result.url, thumbnail_url: result.thumbnail_url,
+            original_name: result.original_name, size: result.size, mimetype: result.mimetype,
+            folder_id: result.folder_id, resource_type: result.mimetype?.startsWith('video') ? 'video' : 'image'
           });
           successCount++;
         } catch (e) {
           uploadStatus.innerHTML = `<i class="fas fa-times-circle"></i> Lỗi upload ${file.name}: ${e.message}`;
-          uploadAllBtn.disabled = false;
-          return;
+          uploadAllBtn.disabled = false; return;
         }
       }
 
       uploadProgress.style.width = '100%';
       let msg = '';
-      if (successCount > 0) msg += `✅ Thành công: ${successCount}/${total} tệp. `;
+      if (successCount > 0) msg += `✅ Thành công: ${successCount}/${total}. `;
       if (skipCount > 0) msg += `⏭️ Bỏ qua trùng: ${skipCount}.`;
       uploadStatus.innerHTML = msg || 'Không có tệp nào được tải.';
       uploadAllBtn.disabled = false;
       filesToUpload = []; renderFileList();
-      await loadAllMedia();
-      applyFilter();
-      showRandomMedia();
-      loadFolders();
+      await loadAllMedia(); applyFilter(); showRandomMedia(); loadFolders(); loadStats();
     });
 
     function renderMedia(files) {
@@ -1337,39 +1150,30 @@
       if(!files.length) { mediaGallery.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:2rem;"><i class="fas fa-inbox fa-2x"></i><p>Trống</p></div>'; updateSelectionUI(); return; }
       const frag = document.createDocumentFragment();
       files.forEach((file, index) => {
-        const isVideo = file.mimetype && file.mimetype.startsWith('video');
+        const isVideo = file.mimetype?.startsWith('video');
         const card = document.createElement('div');
         card.className = 'media-card' + (isVideo ? ' video-thumb' : ' image-thumb');
         if (selectedMediaIds.has(file.id)) card.classList.add('selected');
         card.dataset.mediaId = file.id;
-        const img = document.createElement('img');
-        img.alt = file.original_name || '';
-        img.loading = 'lazy';
+        const img = document.createElement('img'); img.alt = file.original_name||''; img.loading = 'lazy';
         img.src = getThumbnailUrl(file);
-        img.onerror = () => {
-          img.src = 'data:image/svg+xml,' + encodeURIComponent(`
-            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-              <rect width="200" height="200" fill="#1e2538" rx="10"/>
-              <text x="100" y="110" font-size="20" text-anchor="middle" fill="#9aa4bf">Ảnh lỗi</text>
-            </svg>
-          `);
-        };
+        img.onerror = () => { img.src = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#1e2538" rx="10"/><text x="100" y="110" font-size="20" text-anchor="middle" fill="#9aa4bf">Lỗi</text></svg>`); };
         card.appendChild(img);
         const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.className = 'select-checkbox'; checkbox.checked = selectedMediaIds.has(file.id);
-        checkbox.addEventListener('click', (e) => { e.stopPropagation(); toggleSelectMedia(file.id, card); });
+        checkbox.addEventListener('click', e => { e.stopPropagation(); toggleSelectMedia(file.id, card); });
         card.appendChild(checkbox);
         const delBtn = document.createElement('button'); delBtn.className = 'delete-btn'; delBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-        delBtn.addEventListener('click', async (e) => {
+        delBtn.addEventListener('click', async e => {
           e.stopPropagation();
-          const confirmed = await showConfirm('Xóa ảnh/video này?');
-          if (!confirmed) return;
-          try { await fetch(`${API_BASE}/api/media/${file.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${serverToken}` } }); } catch(e) {}
-          allMediaCache = allMediaCache.filter(m => m.id !== file.id); selectedMediaIds.delete(file.id); applyFilter();
+          if (await showConfirm('Xóa?')) {
+            try { await fetch(`${API_BASE}/api/media/${file.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${serverToken}` } }); } catch(e) {}
+            allMediaCache = allMediaCache.filter(m => m.id !== file.id); selectedMediaIds.delete(file.id); applyFilter(); loadStats();
+          }
         });
         card.appendChild(delBtn);
-        const typeIcon = document.createElement('div'); typeIcon.className = 'media-type-icon'; typeIcon.innerHTML = isVideo ? '<i class="fas fa-play"></i>' : '';
-        card.appendChild(typeIcon);
-        card.addEventListener('click', (e) => { if (e.target.tagName === 'INPUT') return; openViewer(files, index); });
+        if (isVideo && !file.thumbnail_url) addRegenButton(card, file, img);
+        const typeIcon = document.createElement('div'); typeIcon.className = 'media-type-icon'; typeIcon.innerHTML = isVideo ? '<i class="fas fa-play"></i>' : ''; card.appendChild(typeIcon);
+        card.addEventListener('click', e => { if (e.target.tagName === 'INPUT') return; openViewer(files, index); });
         frag.appendChild(card);
       });
       mediaGallery.appendChild(frag);
@@ -1381,21 +1185,17 @@
     function openViewer(files, index) { viewerFiles = files; viewerIndex = index; viewerOverlay.classList.add('active'); updateViewer(); }
     function closeViewer() { viewerOverlay.classList.remove('active'); viewerContent.innerHTML = ''; }
     viewerCloseBtn.addEventListener('click', closeViewer);
-    viewerOverlay.addEventListener('click', (e) => { if (e.target === viewerOverlay) closeViewer(); });
-    viewerContent.addEventListener('click', (e) => { if (e.target === viewerContent) closeViewer(); });
+    viewerOverlay.addEventListener('click', e => { if (e.target === viewerOverlay) closeViewer(); });
+    viewerContent.addEventListener('click', e => { if (e.target === viewerContent) closeViewer(); });
     function updateViewer() {
       const file = viewerFiles[viewerIndex]; viewerContent.innerHTML = '';
-      const isVideo = file.mimetype && file.mimetype.startsWith('video');
+      const isVideo = file.mimetype?.startsWith('video');
       let media;
       if (isVideo) {
-        media = document.createElement('video');
-        media.src = API_BASE + (file.url || `/uploads/${file.filename}`);
-        media.controls = true;
-        media.preload = 'metadata';
-        media.playsInline = true;
+        media = document.createElement('video'); media.src = API_BASE + (file.url || `/uploads/${file.filename}`);
+        media.controls = true; media.preload = 'metadata'; media.playsInline = true;
       } else {
-        media = document.createElement('img');
-        media.src = API_BASE + (file.url || `/uploads/${file.filename}`);
+        media = document.createElement('img'); media.src = API_BASE + (file.url || `/uploads/${file.filename}`);
       }
       media.className = 'viewer-media'; media.setAttribute('draggable', 'false');
       viewerContent.appendChild(media);
