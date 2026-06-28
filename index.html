@@ -6,7 +6,6 @@
   <title>📁 Vault - Kho lưu trữ cá nhân</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    /* Toàn bộ CSS giữ nguyên như các phiên bản trước */
     * { margin:0; padding:0; box-sizing:border-box; }
     :root {
       --bg-primary: #0b0f19;
@@ -307,7 +306,6 @@
     }
     .folder-link-btn:hover { background: var(--accent); }
 
-    /* Style cho select số lượng random */
     .random-count-select {
       padding: 0.5rem 0.8rem;
       background: var(--bg-card);
@@ -323,7 +321,7 @@
 <body>
 <div class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></div>
 
-<!-- Auth Page (giữ nguyên) -->
+<!-- Auth Page -->
 <div id="authPage" class="auth-container">
   <div class="auth-box" id="loginForm">
     <h2><i class="fas fa-lock"></i> Đăng nhập</h2>
@@ -399,7 +397,6 @@
 
     <main class="main-content" id="mainContent">
       <div id="page-library" class="page active">
-        <!-- Nội dung trang thư viện giữ nguyên như trước -->
         <h2 id="libraryTitle"><i class="fas fa-photo-video"></i> Tất cả</h2>
         <div id="statsBar" class="stats-bar">
           <span>📁 Tổng: <strong id="statTotalFiles">0</strong> file</span>
@@ -432,7 +429,6 @@
       </div>
 
       <div id="page-upload" class="page">
-        <!-- Nội dung trang upload giữ nguyên -->
         <h2><i class="fas fa-cloud-upload-alt"></i> Tải lên</h2>
         <div style="margin:1rem 0;">
           <label style="font-weight:600; display:block; margin-bottom:0.5rem;">📁 Thư mục mặc định</label>
@@ -517,7 +513,64 @@
     let mediaFilterType = 'all', selectedMediaIds = new Set(), serverToken = null;
     const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 
-    // Confirm modal
+    // ===== KHAI BÁO BIẾN DOM SỚM =====
+    const sidebar = $('#sidebar'), mobileMenuBtn = $('#mobileMenuBtn'), sidebarCloseMobile = $('#sidebarCloseMobile');
+    const folderList = $('#folderList'), folderTabsDesktop = $('#folderTabsDesktop'), folderSelectMobile = $('#folderSelectMobile');
+    const mediaGallery = $('#mediaGallery'), libraryTitle = $('#libraryTitle');
+    const randomGallery = $('#randomGallery'), refreshRandomBtn = $('#refreshRandomBtn');
+    const randomCountSelect = $('#randomCountSelect');
+    const newFolderName = $('#newFolderName'), createFolderBtn = $('#createFolderBtn');
+    const viewerOverlay = $('#viewerOverlay'), viewerContent = $('#viewerContent'), viewerCloseBtn = $('#viewerClose');
+    const viewerPrev = $('#viewerPrev'), viewerNext = $('#viewerNext'), viewerCounter = $('#viewerCounter');
+    const filterTabs = $('#filterTabs');
+    const selectionBar = $('#selectionBar'), selectionCount = $('#selectionCount');
+    const moveToFolderSelect = $('#moveToFolderSelect');
+    const moveSelectedBtn = $('#moveSelectedBtn'), deleteSelectedBtn = $('#deleteSelectedBtn'), cancelSelectionBtn = $('#cancelSelectionBtn');
+    const selectAllBtn = $('#selectAllBtn');
+    const selectionRect = $('#selectionRect');
+    const checkDuplicateBtnPermanent = $('#checkDuplicateBtnPermanent');
+
+    const defaultFolderSelect = $('#defaultFolderSelect');
+    const fileInput = $('#fileInput'), uploadZone = $('#uploadZone');
+    const fileListContainer = $('#fileListContainer');
+    const uploadAllBtn = $('#uploadAllBtn'), uploadStatus = $('#uploadStatus'), uploadProgress = $('#uploadProgress');
+    let filesToUpload = [];
+
+    const statTotalFiles = $('#statTotalFiles'), statImages = $('#statImages'), statVideos = $('#statVideos'), statSize = $('#statSize');
+
+    // ===== CÁC HÀM CHUNG =====
+    function goToFolder(folderId) {
+      currentFolderId = folderId || '__unfiled__';
+      const folder = folderId ? foldersCache.find(f => f.id === folderId) : null;
+      libraryTitle.innerHTML = folder
+        ? `<i class="fas fa-folder-open"></i> ${folder.name}`
+        : (folderId === '__unfiled__' ? '<i class="fas fa-box-open"></i> Chưa phân loại' : '<i class="fas fa-photo-video"></i> Tất cả');
+      document.querySelectorAll('#folderList .folder-item').forEach(el => el.classList.remove('active'));
+      const activeItem = document.querySelector(`#folderList .folder-item[data-folder="${currentFolderId}"]`);
+      if (activeItem) activeItem.classList.add('active');
+      switchPage('library');
+      applyFilter();
+      highlightActiveFolder(); // <<< SỬA Ở ĐÂY: cập nhật UI folder
+    }
+
+    function switchPage(page) {
+      $$('.page').forEach(p => p.classList.remove('active'));
+      $('#page-'+page).classList.add('active');
+      $$('.nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(el => el.classList.add('active'));
+      if (window.innerWidth <= 768 && sidebar) sidebar.classList.remove('open');
+      if (page === 'random') showRandomMedia();
+    }
+
+    // ===== Gắn sự kiện cho nav-item =====
+    document.querySelectorAll('.nav-item[data-page]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        const page = el.dataset.page;
+        if (page) switchPage(page);
+      });
+    });
+
+    // ===== CONFIRM MODAL =====
     const confirmModal = $('#confirmModal'), confirmMessage = $('#confirmMessage');
     const confirmYes = $('#confirmYes'), confirmNo = $('#confirmNo');
     let confirmResolve = null;
@@ -535,7 +588,7 @@
     confirmYes.addEventListener('click', () => hideConfirm(true));
     confirmNo.addEventListener('click', () => hideConfirm(false));
 
-    // Duplicate modal (giữ nguyên)
+    // ===== DUPLICATE MODAL =====
     const duplicateModal = $('#duplicateModal'), duplicateInfo = $('#duplicateInfo');
     const duplicateList = $('#duplicateList'), deleteDuplicatesBtn = $('#deleteDuplicatesBtn');
     const closeDuplicateModal = $('#closeDuplicateModal');
@@ -615,7 +668,7 @@
       return groups;
     }
 
-    // Auth
+    // ===== AUTH =====
     const authPage = $('#authPage'), appMain = $('#appMain');
     const loginForm = $('#loginForm'), registerForm = $('#registerForm');
     const loginUsername = $('#loginUsername'), loginPassword = $('#loginPassword'), loginBtn = $('#loginBtn'), loginError = $('#loginError');
@@ -623,82 +676,8 @@
     const showRegister = $('#showRegister'), showLogin = $('#showLogin');
     const displayUser = $('#displayUser'), logoutBtn = $('#logoutBtn'), mobileLogout = $('#mobileLogout');
 
-    // App
-    const sidebar = $('#sidebar'), mobileMenuBtn = $('#mobileMenuBtn'), sidebarCloseMobile = $('#sidebarCloseMobile');
-    const folderList = $('#folderList'), folderTabsDesktop = $('#folderTabsDesktop'), folderSelectMobile = $('#folderSelectMobile');
-    const mediaGallery = $('#mediaGallery'), libraryTitle = $('#libraryTitle');
-    const randomGallery = $('#randomGallery'), refreshRandomBtn = $('#refreshRandomBtn');
-    const randomCountSelect = $('#randomCountSelect');
-    const newFolderName = $('#newFolderName'), createFolderBtn = $('#createFolderBtn');
-    const viewerOverlay = $('#viewerOverlay'), viewerContent = $('#viewerContent'), viewerCloseBtn = $('#viewerClose');
-    const viewerPrev = $('#viewerPrev'), viewerNext = $('#viewerNext'), viewerCounter = $('#viewerCounter');
-    const filterTabs = $('#filterTabs');
-    const selectionBar = $('#selectionBar'), selectionCount = $('#selectionCount');
-    const moveToFolderSelect = $('#moveToFolderSelect');
-    const moveSelectedBtn = $('#moveSelectedBtn'), deleteSelectedBtn = $('#deleteSelectedBtn'), cancelSelectionBtn = $('#cancelSelectionBtn');
-    const selectAllBtn = $('#selectAllBtn');
-    const selectionRect = $('#selectionRect');
-    const checkDuplicateBtnPermanent = $('#checkDuplicateBtnPermanent');
-
-    // Upload
-    const defaultFolderSelect = $('#defaultFolderSelect');
-    const fileInput = $('#fileInput'), uploadZone = $('#uploadZone');
-    const fileListContainer = $('#fileListContainer');
-    const uploadAllBtn = $('#uploadAllBtn'), uploadStatus = $('#uploadStatus'), uploadProgress = $('#uploadProgress');
-    let filesToUpload = [];
-
-    // Stats
-    const statTotalFiles = $('#statTotalFiles'), statImages = $('#statImages'), statVideos = $('#statVideos'), statSize = $('#statSize');
-
-    // Rubber band selection (giữ nguyên)
-    let isDragging = false, dragStartX, dragStartY;
-    mediaGallery.addEventListener('mousedown', (e) => {
-      if (e.target === mediaGallery || e.target.classList.contains('gallery')) {
-        e.preventDefault();
-        isDragging = true;
-        const rect = mediaGallery.getBoundingClientRect();
-        dragStartX = e.clientX - rect.left + mediaGallery.scrollLeft;
-        dragStartY = e.clientY - rect.top + mediaGallery.scrollTop;
-        selectionRect.style.display = 'block';
-        selectionRect.style.left = dragStartX + 'px';
-        selectionRect.style.top = dragStartY + 'px';
-        selectionRect.style.width = '0px';
-        selectionRect.style.height = '0px';
-      }
-    });
-    window.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const rect = mediaGallery.getBoundingClientRect();
-      const x = e.clientX - rect.left + mediaGallery.scrollLeft;
-      const y = e.clientY - rect.top + mediaGallery.scrollTop;
-      const left = Math.min(dragStartX, x), top = Math.min(dragStartY, y);
-      const width = Math.abs(x - dragStartX), height = Math.abs(y - dragStartY);
-      selectionRect.style.left = left + 'px';
-      selectionRect.style.top = top + 'px';
-      selectionRect.style.width = width + 'px';
-      selectionRect.style.height = height + 'px';
-    });
-    window.addEventListener('mouseup', () => {
-      if (!isDragging) return;
-      isDragging = false;
-      selectionRect.style.display = 'none';
-      const rect = selectionRect.getBoundingClientRect();
-      document.querySelectorAll('.media-card').forEach(card => {
-        const cardRect = card.getBoundingClientRect();
-        if (!(cardRect.right < rect.left || cardRect.left > rect.right || cardRect.bottom < rect.top || cardRect.top > rect.bottom)) {
-          const id = card.dataset.mediaId;
-          if (id && !selectedMediaIds.has(id)) {
-            selectedMediaIds.add(id);
-            card.classList.add('selected');
-          }
-        }
-      });
-      updateSelectionUI();
-    });
-
-    mobileMenuBtn.addEventListener('click', () => sidebar.classList.add('open'));
-    sidebarCloseMobile.addEventListener('click', () => sidebar.classList.remove('open'));
-    $('#mainContent').addEventListener('click', () => { if (window.innerWidth <= 768) sidebar.classList.remove('open'); });
+    showRegister.onclick = () => { loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
+    showLogin.onclick = () => { registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
 
     async function apiCall(url, options = {}) {
       const headers = options.headers || {};
@@ -708,9 +687,6 @@
       if (res.status === 401) { logout(); throw new Error('Phiên hết hạn.'); }
       return res.json();
     }
-
-    showRegister.onclick = () => { loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
-    showLogin.onclick = () => { registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); loginError.textContent=''; registerError.textContent=''; };
 
     registerBtn.onclick = async () => {
       const u = regUsername.value.trim(), p = regPassword.value, c = regConfirm.value;
@@ -780,16 +756,7 @@
       authPage.classList.remove('hidden'); appMain.classList.add('hidden');
     }
 
-    function switchPage(page) {
-      $$('.page').forEach(p => p.classList.remove('active'));
-      $('#page-'+page).classList.add('active');
-      $$('.nav-item').forEach(i => i.classList.remove('active'));
-      document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(el => el.classList.add('active'));
-      if (window.innerWidth <= 768) sidebar.classList.remove('open');
-    }
-    $$('.nav-item[data-page]').forEach(el => el.onclick = () => switchPage(el.dataset.page));
-
-    // Stats
+    // ===== STATS =====
     async function loadStats() {
       try {
         const res = await fetch(`${API_BASE}/api/stats`, { headers: { 'Authorization': `Bearer ${serverToken}` } });
@@ -803,32 +770,21 @@
       } catch(e) { console.error('Lỗi tải thống kê:', e); }
     }
 
-    // ====== Hàm Random mới ======
+    // ===== RANDOM =====
     function getRandomItems(count = 10) {
-      // Nhóm media theo folder_id (null hoặc undefined coi là folder "unfiled")
       const folderMap = new Map();
       allMediaCache.forEach(m => {
         const folderKey = m.folder_id || '__unfiled__';
         if (!folderMap.has(folderKey)) folderMap.set(folderKey, []);
         folderMap.get(folderKey).push(m);
       });
-
-      // Từ mỗi folder lấy tối đa 2 media
       let candidates = [];
       folderMap.forEach(mediaList => {
         const shuffled = [...mediaList].sort(() => Math.random() - 0.5);
         candidates.push(...shuffled.slice(0, 2));
       });
-
-      // Trộn toàn bộ candidates
       candidates = candidates.sort(() => Math.random() - 0.5);
-
-      // Nếu số lượng yêu cầu ít hơn candidates, cắt bớt
-      if (count <= candidates.length) {
-        return candidates.slice(0, count);
-      }
-
-      // Nếu thiếu, lấy thêm từ pool gốc (bỏ qua giới hạn folder)
+      if (count <= candidates.length) return candidates.slice(0, count);
       const remaining = [...allMediaCache].sort(() => Math.random() - 0.5);
       const existingIds = new Set(candidates.map(m => m.id));
       for (const m of remaining) {
@@ -902,7 +858,10 @@
         card.appendChild(img);
         const folderBtn = document.createElement('button'); folderBtn.className = 'folder-link-btn';
         folderBtn.innerHTML = '<i class="fas fa-folder-open"></i>';
-        folderBtn.addEventListener('click', e => { e.stopPropagation(); goToFolder(file.folder_id); });
+        folderBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          goToFolder(file.folder_id);
+        });
         card.appendChild(folderBtn);
         if (isVideo && !file.thumbnail_url) addRegenButton(card, file, img);
         const typeIcon = document.createElement('div'); typeIcon.className = 'media-type-icon'; typeIcon.innerHTML = isVideo ? '<i class="fas fa-play"></i>' : ''; card.appendChild(typeIcon);
@@ -912,12 +871,13 @@
       randomGallery.appendChild(frag);
     }
 
-    // Folders
+    refreshRandomBtn.addEventListener('click', () => showRandomMedia());
+
+    // ===== FOLDERS =====
     async function loadFolders() {
       const snap = await db.collection('users').doc(currentUser).collection('folders').orderBy('name').get();
       foldersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const collator = new Intl.Collator('vi', { numeric: true, sensitivity: 'base' });
-      foldersCache.sort((a, b) => collator.compare(a.name, b.name));
+      foldersCache.sort((a, b) => new Intl.Collator('vi', { numeric: true, sensitivity: 'base' }).compare(a.name, b.name));
       renderFolders();
     }
 
@@ -992,9 +952,13 @@
 
     function highlightActiveFolder() {
       document.querySelectorAll('#folderList .folder-item').forEach(el => el.classList.remove('active'));
-      if (currentFolderId) document.querySelector(`#folderList .folder-item[data-folder="${currentFolderId}"]`)?.classList.add('active');
+      if (currentFolderId) {
+        const activeItem = document.querySelector(`#folderList .folder-item[data-folder="${currentFolderId}"]`);
+        if (activeItem) activeItem.classList.add('active');
+      }
       document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
-      document.querySelector(`.folder-tab[data-folder="${currentFolderId || ''}"]`)?.classList.add('active');
+      const activeTab = document.querySelector(`.folder-tab[data-folder="${currentFolderId || ''}"]`);
+      if (activeTab) activeTab.classList.add('active');
       folderSelectMobile.value = currentFolderId || '';
     }
 
@@ -1038,7 +1002,7 @@
       showDuplicateModal(findDuplicates(allMediaCache));
     });
 
-    // Selection
+    // ===== SELECTION =====
     function clearSelection() { selectedMediaIds.clear(); updateSelectionUI(); document.querySelectorAll('.media-card').forEach(c => c.classList.remove('selected')); }
     function updateSelectionUI() {
       const count = selectedMediaIds.size;
@@ -1082,7 +1046,7 @@
       try { await batch.commit(); allMediaCache = allMediaCache.filter(m => !selectedMediaIds.has(m.id)); clearSelection(); applyFilter(); loadStats(); } catch(e) { alert('Lỗi: '+e.message); }
     });
 
-    // Upload (giữ nguyên)
+    // ===== UPLOAD =====
     function buildFolderOptions(selectedId = '') {
       let opts = '<option value="">-- Chọn --</option>';
       foldersCache.forEach(f => opts += `<option value="${f.id}" ${f.id===selectedId?'selected':''}>${f.name}</option>`);
@@ -1238,7 +1202,7 @@
       updateSelectionUI();
     }
 
-    // Viewer (giữ nguyên)
+    // ===== VIEWER =====
     let viewerFiles = [], viewerIndex = 0;
     function openViewer(files, index) { viewerFiles = files; viewerIndex = index; viewerOverlay.classList.add('active'); updateViewer(); }
     function closeViewer() { viewerOverlay.classList.remove('active'); viewerContent.innerHTML = ''; }
@@ -1269,16 +1233,56 @@
       }
     });
 
-    // Gán sự kiện cho nút Làm mới
-    refreshRandomBtn.addEventListener('click', () => {
-      showRandomMedia();
+    // ===== MOBILE MENU =====
+    mobileMenuBtn.addEventListener('click', () => sidebar.classList.add('open'));
+    sidebarCloseMobile.addEventListener('click', () => sidebar.classList.remove('open'));
+    $('#mainContent').addEventListener('click', () => { if (window.innerWidth <= 768) sidebar.classList.remove('open'); });
+
+    // ===== RUBBER BAND SELECTION =====
+    let isDragging = false, dragStartX, dragStartY;
+    mediaGallery.addEventListener('mousedown', (e) => {
+      if (e.target === mediaGallery || e.target.classList.contains('gallery')) {
+        e.preventDefault();
+        isDragging = true;
+        const rect = mediaGallery.getBoundingClientRect();
+        dragStartX = e.clientX - rect.left + mediaGallery.scrollLeft;
+        dragStartY = e.clientY - rect.top + mediaGallery.scrollTop;
+        selectionRect.style.display = 'block';
+        selectionRect.style.left = dragStartX + 'px';
+        selectionRect.style.top = dragStartY + 'px';
+        selectionRect.style.width = '0px';
+        selectionRect.style.height = '0px';
+      }
     });
-    // Khi chuyển sang trang Random, cũng tự load
-    const originalSwitchPage = switchPage;
-    switchPage = function(page) {
-      originalSwitchPage(page);
-      if (page === 'random') showRandomMedia();
-    };
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const rect = mediaGallery.getBoundingClientRect();
+      const x = e.clientX - rect.left + mediaGallery.scrollLeft;
+      const y = e.clientY - rect.top + mediaGallery.scrollTop;
+      const left = Math.min(dragStartX, x), top = Math.min(dragStartY, y);
+      const width = Math.abs(x - dragStartX), height = Math.abs(y - dragStartY);
+      selectionRect.style.left = left + 'px';
+      selectionRect.style.top = top + 'px';
+      selectionRect.style.width = width + 'px';
+      selectionRect.style.height = height + 'px';
+    });
+    window.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      selectionRect.style.display = 'none';
+      const rect = selectionRect.getBoundingClientRect();
+      document.querySelectorAll('.media-card').forEach(card => {
+        const cardRect = card.getBoundingClientRect();
+        if (!(cardRect.right < rect.left || cardRect.left > rect.right || cardRect.bottom < rect.top || cardRect.top > rect.bottom)) {
+          const id = card.dataset.mediaId;
+          if (id && !selectedMediaIds.has(id)) {
+            selectedMediaIds.add(id);
+            card.classList.add('selected');
+          }
+        }
+      });
+      updateSelectionUI();
+    });
 
     checkSession();
   })();
